@@ -1,6 +1,6 @@
 # Construction Site Intelligence Platform
 
-A modern, full-stack intelligence platform for construction sites designed to monitor health, safety, and operations.
+A modern, full-stack intelligence platform for construction sites designed to manage projects, job sites, work zones, personnel, and monitor safety operations.
 
 ---
 
@@ -24,16 +24,36 @@ Buldathon_ps1_2026/
 │   │   ├── favicon.ico
 │   │   ├── globals.css
 │   │   ├── layout.tsx
-│   │   └── page.tsx
+│   │   ├── page.tsx          # Home page & health check
+│   │   └── projects/
+│   │       ├── page.tsx      # Projects list & filter
+│   │       ├── new/
+│   │       │   └── page.tsx  # Create project page
+│   │       └── [id]/
+│   │           └── page.tsx  # Project details (sites, areas, members)
+│   ├── components/
+│   │   ├── Navbar.tsx
+│   │   ├── ProjectCard.tsx
+│   │   ├── SiteList.tsx
+│   │   ├── AreaList.tsx
+│   │   └── MemberList.tsx
+│   ├── lib/
+│   │   └── api.ts            # Typed API client
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── ...
 │
 ├── backend/
 │   ├── venv/                 # LOCAL ONLY, NEVER COMMITTED
-│   ├── main.py               # FastAPI entrypoint & endpoints
+│   ├── main.py               # FastAPI entrypoint & health checks
 │   ├── database.py           # SQLAlchemy engine & session setup
-│   ├── models.py             # Database models (User)
+│   ├── models.py             # SQLAlchemy models (User, Project, Site, Area, Member)
+│   ├── schemas.py            # Pydantic validation schemas
+│   ├── routers/
+│   │   ├── projects.py       # Project, sub-site & sub-member APIs
+│   │   ├── sites.py          # Site & sub-area APIs
+│   │   ├── areas.py          # Area APIs
+│   │   └── users.py          # User management APIs
 │   ├── requirements.txt      # Python dependencies
 │   └── .env                  # LOCAL ONLY, NEVER COMMITTED
 │
@@ -136,23 +156,60 @@ The Next.js frontend will start at `http://localhost:3000`.
 
 ## 8. API Endpoints
 
+### Health & Root
 | Method | Endpoint | Description | Expected Response |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/` | API Root Health | `{"message": "Construction Intelligence API is running"}` |
 | `GET` | `/api/health` | Backend Service Health | `{"status": "healthy"}` |
 | `GET` | `/api/db-health` | Live PostgreSQL Connection Check | `{"status": "database connected"}` |
 | `GET` | `/docs` | Interactive Swagger UI documentation | Interactive API Docs |
-| `GET` | `/redoc` | ReDoc API documentation | OpenAPI Docs |
+
+### Project Management APIs (Phase 2)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/projects` | Create a new construction project |
+| `GET` | `/api/projects` | List all projects |
+| `GET` | `/api/projects/{project_id}` | Get full project details (sites, areas, members) |
+| `PUT` | `/api/projects/{project_id}` | Update project info/status |
+| `DELETE` | `/api/projects/{project_id}` | Delete project (cascades to sites & areas) |
+
+### Site APIs
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/projects/{project_id}/sites` | Create a site under a project |
+| `GET` | `/api/projects/{project_id}/sites` | List sites under a project |
+| `GET` | `/api/sites/{site_id}` | Get site details |
+| `PUT` | `/api/sites/{site_id}` | Update site info |
+| `DELETE` | `/api/sites/{site_id}` | Delete site (cascades to areas) |
+
+### Area APIs
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/sites/{site_id}/areas` | Create an area under a site |
+| `GET` | `/api/sites/{site_id}/areas` | List areas under a site |
+| `GET` | `/api/areas/{area_id}` | Get area details |
+| `PUT` | `/api/areas/{area_id}` | Update area info |
+| `DELETE` | `/api/areas/{area_id}` | Delete area |
+
+### Project Member APIs
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/projects/{project_id}/members` | Assign a user to a project |
+| `GET` | `/api/projects/{project_id}/members` | List members of a project |
+| `PUT` | `/api/projects/{project_id}/members/{user_id}` | Update member role |
+| `DELETE` | `/api/projects/{project_id}/members/{user_id}` | Remove user from project |
 
 ---
 
-## 9. Phase 1 Completion Status
+## 9. Phase Completion Status
 
-- [x] Full-stack project structure established
-- [x] FastAPI backend configured with CORS and error handling
-- [x] PostgreSQL database (`construction_intelligence`) integrated via SQLAlchemy
-- [x] User model defined and `users` table created
-- [x] Real health checks implemented (`/`, `/api/health`, `/api/db-health`)
-- [x] Next.js frontend connected to backend `/api/health`
-- [x] Environment variable management configured with `.gitignore` protection
-- [x] End-to-end verification tests passed
+- [x] **Phase 1: Basic Project Setup**
+  - Full-stack foundation (Next.js, FastAPI, PostgreSQL, SQLAlchemy)
+  - Live health check endpoints & verified CORS
+  - Environment variable security
+- [x] **Phase 2: Project Management**
+  - Data models: Projects, Sites, Areas, Project Members, Users
+  - Cascading relationships and uniqueness constraints
+  - Modular REST APIs with routers & Pydantic validation
+  - Responsive Project Management UI with complete CRUD
+  - End-to-end regression & persistence verification

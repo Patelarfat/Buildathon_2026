@@ -6,6 +6,7 @@ from sqlalchemy import text
 
 from database import engine, Base
 import models
+from routers import projects, sites, areas, users
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,6 +24,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Construction Site Intelligence API",
+    description="Backend API for Construction Site Intelligence Platform - Project Management",
+    version="0.2.0",
     lifespan=lifespan
 )
 
@@ -38,6 +41,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include API Routers
+app.include_router(projects.router)
+app.include_router(sites.router)
+app.include_router(areas.router)
+app.include_router(users.router)
 
 
 @app.get("/")
@@ -61,4 +70,5 @@ def db_health():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Database connection failed: {str(e)}"
-        )
+        )
+

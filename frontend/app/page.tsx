@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 type HealthState = {
   loading: boolean;
@@ -42,11 +43,11 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-600/10 text-blue-500 mb-6 border border-blue-500/20">
+    <main className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-6 bg-slate-950 text-slate-100">
+      <div className="max-w-lg w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 sm:p-10 shadow-2xl text-center space-y-6">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-blue-600/10 text-blue-500 border border-blue-500/20 shadow-inner">
           <svg
-            className="w-8 h-8"
+            className="w-10 h-10"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -61,12 +62,20 @@ export default function Home() {
           </svg>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-6">
-          Construction Site Intelligence Platform
-        </h1>
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+            Construction Site Intelligence Platform
+          </h1>
+          <p className="text-xs text-slate-400 mt-2">
+            Phase 2: Project, Site, Area & Team Management System
+          </p>
+        </div>
 
-        <div className="bg-slate-950/60 rounded-xl p-4 border border-slate-800/80 mb-6">
-          <p className="text-sm font-medium text-slate-400 mb-2">Backend Status</p>
+        {/* Backend Status Box (Phase 1 Requirement) */}
+        <div className="bg-slate-950/70 rounded-2xl p-4 border border-slate-800">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+            Backend Status
+          </p>
           <div className="flex items-center justify-center space-x-2">
             {health.loading && (
               <span className="inline-flex items-center text-amber-400 font-semibold text-sm">
@@ -91,13 +100,23 @@ export default function Home() {
           </div>
         </div>
 
-        <button
-          onClick={checkHealth}
-          className="px-4 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-colors border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Recheck Status
-        </button>
+        {/* Navigation & Actions */}
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+          <Link
+            href="/projects"
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition-all shadow-lg shadow-blue-600/30 text-center"
+          >
+            Explore Projects Portfolio →
+          </Link>
+          <button
+            onClick={checkHealth}
+            className="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl border border-slate-700 transition-colors"
+          >
+            Recheck Backend
+          </button>
+        </div>
       </div>
     </main>
   );
-}
+}
+
