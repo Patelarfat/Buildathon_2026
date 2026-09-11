@@ -50,6 +50,9 @@ backend/uploads/ai/*
 *.onnx
 runs/
 datasets/
+backend/ai/runs/
+backend/ai/candidate_runs/
+backend/ai/candidate_weights/
 backend/ai/weights/*
 !backend/ai/weights/.gitkeep
 

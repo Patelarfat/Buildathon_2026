@@ -1,0 +1,173 @@
+{
+  "benchmark_date": "2026-09-12",
+  "test_split_size": 141,
+  "total_test_instances": 1251,
+  "baseline_yolo11n": {
+    "model_name": "YOLO11n (Baseline)",
+    "weights_path": "C:/Users/arfat/Buldathon_ps1_2026/backend/ai/weights/best.pt",
+    "overall": {
+      "precision": 0.802,
+      "recall": 0.3659,
+      "map50": 0.3929,
+      "map50_95": 0.1812
+    },
+    "speed_ms": {
+      "preprocess": 4.41,
+      "inference": 188.6,
+      "postprocess": 39.82,
+      "total": 232.83
+    },
+    "per_class": {
+      "helmet": {
+        "precision": 0.8146,
+        "recall": 0.7778,
+        "map50": 0.8158,
+        "map50_95": 0.3986
+      },
+      "gloves": {
+        "precision": 0.8493,
+        "recall": 0.4842,
+        "map50": 0.5787,
+        "map50_95": 0.2553
+      },
+      "vest": {
+        "precision": 0.7009,
+        "recall": 0.7503,
+        "map50": 0.7776,
+        "map50_95": 0.4197
+      },
+      "boots": {
+        "precision": 0.7859,
+        "recall": 0.545,
+        "map50": 0.6413,
+        "map50_95": 0.3133
+      },
+      "goggles": {
+        "precision": 0.6539,
+        "recall": 0.5192,
+        "map50": 0.5504,
+        "map50_95": 0.2018
+      },
+      "none": {
+        "precision": 0.2946,
+        "recall": 0.2154,
+        "map50": 0.1709,
+        "map50_95": 0.0615
+      },
+      "Person": {
+        "precision": 0.7226,
+        "recall": 0.7331,
+        "map50": 0.7329,
+        "map50_95": 0.3309
+      },
+      "no_helmet": {
+        "precision": 1.0,
+        "recall": 0.0,
+        "map50": 0.0499,
+        "map50_95": 0.0118
+      },
+      "no_goggle": {
+        "precision": 1.0,
+        "recall": 0.0,
+        "map50": 0.004,
+        "map50_95": 0.0006
+      },
+      "no_gloves": {
+        "precision": 1.0,
+        "recall": 0.0,
+        "map50": 0.0005,
+        "map50_95": 0.0002
+      },
+      "no_boots": {
+        "precision": 1.0,
+        "recall": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      }
+    }
+  },
+  "candidate_yolo26n": {
+    "model_name": "YOLO26n (Candidate)",
+    "weights_path": "yolo26n.pt",
+    "overall": {
+      "precision": 0.004,
+      "recall": 0.0136,
+      "map50": 0.0004,
+      "map50_95": 0.0001
+    },
+    "speed_ms": {
+      "preprocess": 4.09,
+      "inference": 213.64,
+      "postprocess": 14.94,
+      "total": 232.66
+    },
+    "per_class": {
+      "helmet": {
+        "precision": 0.0066,
+        "recall": 0.1094,
+        "map50": 0.0008,
+        "map50_95": 0.0002
+      },
+      "gloves": {
+        "precision": 0.0039,
+        "recall": 0.0061,
+        "map50": 0.0001,
+        "map50_95": 0.0
+      },
+      "vest": {
+        "precision": 0.0013,
+        "recall": 0.0169,
+        "map50": 0.0001,
+        "map50_95": 0.0
+      },
+      "boots": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      "goggles": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      "none": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      "Person": {
+        "precision": 0.032,
+        "recall": 0.0169,
+        "map50": 0.0032,
+        "map50_95": 0.0012
+      },
+      "no_helmet": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      "no_goggle": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      "no_gloves": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      },
+      "no_boots": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "map50": 0.0,
+        "map50_95": 0.0
+      }
+    }
+  }
+}
