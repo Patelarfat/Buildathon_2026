@@ -427,6 +427,32 @@ export const getDbHealth = () => request<{ status: string }>("/api/db-health");
 // PHASE 4: AI COMPUTER VISION API
 // ==========================================
 
+export const AI_PPE_VIOLATION_TYPES = [
+  "PERSON_WITHOUT_HELMET",
+  "PERSON_WITHOUT_GLOVES",
+  "PERSON_WITHOUT_BOOTS",
+  "PERSON_WITHOUT_GOGGLES",
+] as const;
+
+export const AI_PPE_COMPLIANCE_TYPES = [
+  "HELMET_DETECTED",
+  "GLOVES_DETECTED",
+  "BOOTS_DETECTED",
+  "GOGGLES_DETECTED",
+  "VEST_DETECTED",
+] as const;
+
+export type PPEViolationType = typeof AI_PPE_VIOLATION_TYPES[number];
+export type PPEComplianceType = typeof AI_PPE_COMPLIANCE_TYPES[number];
+
+export function isPPEViolation(finding: { finding_type: string }): boolean {
+  return (AI_PPE_VIOLATION_TYPES as readonly string[]).includes(finding.finding_type);
+}
+
+export function isPPECompliance(finding: { finding_type: string }): boolean {
+  return (AI_PPE_COMPLIANCE_TYPES as readonly string[]).includes(finding.finding_type);
+}
+
 export type FindingStatus = "OPEN" | "REVIEWED" | "RESOLVED" | "FALSE_POSITIVE";
 export type FindingSeverity = "HIGH" | "MEDIUM" | "LOW" | "INFO";
 

@@ -18,6 +18,8 @@ import {
   getPhotoAnalysis,
   updateAIFindingStatus,
   bulkAnalyzePendingPhotos,
+  isPPEViolation,
+  isPPECompliance,
   API_BASE,
 } from "../../../../lib/api";
 import ProjectNav from "../../../../components/ProjectNav";
@@ -589,73 +591,125 @@ export default function ProjectPhotosPage({
               )}
             </div>
 
-            {/* Safety Findings & Human-in-the-Loop Review */}
-            <div className="space-y-3 pt-2 border-t border-slate-800">
-              <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center space-x-2">
-                  <span>⚠️ AI Safety Findings & Human Verification ({activeAnalysis.safety_findings.length})</span>
-                </h4>
-                <span className="text-[11px] text-slate-500">Human-in-the-loop review required</span>
-              </div>
+            {/* PPE Semantic Interpretation */}
+            {(() => {
+              const complianceFindings = activeAnalysis.safety_findings.filter(isPPECompliance);
+              const violationFindings = activeAnalysis.safety_findings.filter(isPPEViolation);
 
-              {activeAnalysis.safety_findings.length === 0 ? (
-                <p className="text-xs text-emerald-400 py-3 bg-emerald-950/20 border border-emerald-900/40 rounded-xl px-4">
-                  ✓ No PPE violations detected in this frame. All visible personnel are compliant.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {activeAnalysis.safety_findings.map((finding) => (
-                    <div
-                      key={finding.id}
-                      className="bg-slate-950/80 border border-slate-800 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${severityBadge(finding.severity)}`}>
-                            {finding.severity}
-                          </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${statusBadge(finding.status)}`}>
-                            {finding.status}
-                          </span>
-                          <span className="text-xs font-bold text-white">{finding.title}</span>
-                        </div>
-                        {finding.description && (
-                          <p className="text-xs text-slate-400">{finding.description}</p>
-                        )}
-                        <p className="text-[11px] text-slate-500">
-                          Finding Type: <span className="font-mono text-slate-400">{finding.finding_type}</span> · Confidence: <span className="text-blue-400">{Math.round(finding.confidence * 100)}%</span>
-                        </p>
-                      </div>
-
-                      {/* Human Review Actions */}
-                      <div className="flex items-center space-x-1.5 shrink-0">
-                        <button
-                          onClick={() => handleUpdateFindingStatus(finding.id, "REVIEWED")}
-                          disabled={updatingFindingId === finding.id || finding.status === "REVIEWED"}
-                          className="px-2.5 py-1 text-[11px] font-semibold bg-blue-950/60 hover:bg-blue-900/80 text-blue-300 border border-blue-800/60 rounded-lg transition-colors disabled:opacity-40"
-                        >
-                          Mark Reviewed
-                        </button>
-                        <button
-                          onClick={() => handleUpdateFindingStatus(finding.id, "RESOLVED")}
-                          disabled={updatingFindingId === finding.id || finding.status === "RESOLVED"}
-                          className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/60 rounded-lg transition-colors disabled:opacity-40"
-                        >
-                          Resolve
-                        </button>
-                        <button
-                          onClick={() => handleUpdateFindingStatus(finding.id, "FALSE_POSITIVE")}
-                          disabled={updatingFindingId === finding.id || finding.status === "FALSE_POSITIVE"}
-                          className="px-2.5 py-1 text-[11px] font-semibold bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-700 rounded-lg transition-colors disabled:opacity-40"
-                        >
-                          False Positive
-                        </button>
-                      </div>
+              return (
+                <div className="space-y-6 pt-2 border-t border-slate-800">
+                  {/* Section A: PPE Compliance Confirmations */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center space-x-2">
+                        <span>🟢 PPE Compliance ({complianceFindings.length})</span>
+                      </h4>
+                      <span className="text-[11px] text-emerald-500/80 font-medium">Safe & Verified Equipment</span>
                     </div>
-                  ))}
+
+                    {complianceFindings.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic py-2 bg-slate-950/40 border border-slate-800/60 rounded-xl px-4">
+                        No compliant PPE equipment verified in this frame.
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {complianceFindings.map((cf) => (
+                          <div
+                            key={cf.id}
+                            className="bg-emerald-950/20 border border-emerald-800/40 p-3 rounded-xl flex items-start justify-between gap-3"
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-emerald-400 font-bold text-sm">✓</span>
+                                <span className="text-xs font-bold text-white">{cf.title}</span>
+                              </div>
+                              {cf.description && (
+                                <p className="text-xs text-slate-400">{cf.description}</p>
+                              )}
+                              <p className="text-[11px] text-slate-500">
+                                Type: <span className="font-mono text-emerald-300/80">{cf.finding_type}</span> · Confidence: <span className="text-emerald-400 font-medium">{Math.round(cf.confidence * 100)}%</span>
+                              </p>
+                            </div>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-emerald-950/60 text-emerald-300 border-emerald-800/80 shrink-0">
+                              VERIFIED
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Section B: AI Safety Violations & Human Review */}
+                  <div className="space-y-3 pt-2 border-t border-slate-800/60">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center space-x-2">
+                        <span>⚠️ AI Safety Violations ({violationFindings.length})</span>
+                      </h4>
+                      <span className="text-[11px] text-slate-500">Human-in-the-loop review required</span>
+                    </div>
+
+                    {violationFindings.length === 0 ? (
+                      <div className="p-3.5 bg-emerald-950/30 border border-emerald-900/50 rounded-xl flex items-center space-x-2.5 text-emerald-400 text-xs">
+                        <span className="text-base font-bold">✓</span>
+                        <span className="font-semibold">No PPE safety violations detected.</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {violationFindings.map((finding) => (
+                          <div
+                            key={finding.id}
+                            className="bg-slate-950/80 border border-rose-900/30 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-rose-800/50 transition-colors"
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${severityBadge(finding.severity)}`}>
+                                  {finding.severity}
+                                </span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${statusBadge(finding.status)}`}>
+                                  {finding.status}
+                                </span>
+                                <span className="text-xs font-bold text-white">{finding.title}</span>
+                              </div>
+                              {finding.description && (
+                                <p className="text-xs text-slate-400">{finding.description}</p>
+                              )}
+                              <p className="text-[11px] text-slate-500">
+                                Finding Type: <span className="font-mono text-slate-400">{finding.finding_type}</span> · Confidence: <span className="text-rose-400 font-medium">{Math.round(finding.confidence * 100)}%</span>
+                              </p>
+                            </div>
+
+                            {/* Human Review Actions */}
+                            <div className="flex items-center space-x-1.5 shrink-0">
+                              <button
+                                onClick={() => handleUpdateFindingStatus(finding.id, "REVIEWED")}
+                                disabled={updatingFindingId === finding.id || finding.status === "REVIEWED"}
+                                className="px-2.5 py-1 text-[11px] font-semibold bg-blue-950/60 hover:bg-blue-900/80 text-blue-300 border border-blue-800/60 rounded-lg transition-colors disabled:opacity-40"
+                              >
+                                Mark Reviewed
+                              </button>
+                              <button
+                                onClick={() => handleUpdateFindingStatus(finding.id, "RESOLVED")}
+                                disabled={updatingFindingId === finding.id || finding.status === "RESOLVED"}
+                                className="px-2.5 py-1 text-[11px] font-semibold bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/60 rounded-lg transition-colors disabled:opacity-40"
+                              >
+                                Resolve
+                              </button>
+                              <button
+                                onClick={() => handleUpdateFindingStatus(finding.id, "FALSE_POSITIVE")}
+                                disabled={updatingFindingId === finding.id || finding.status === "FALSE_POSITIVE"}
+                                className="px-2.5 py-1 text-[11px] font-semibold bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-700 rounded-lg transition-colors disabled:opacity-40"
+                              >
+                                False Positive
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+              );
+            })()}
           </div>
         </div>
       )}
