@@ -255,6 +255,11 @@ The Next.js frontend will start at `http://localhost:3000`.
 | `GET` | `/api/projects/{id}/safety-summary` | Consolidated safety metrics & PPE violation breakdown |
 | `GET` | `/api/projects/{id}/operational-risk` | Operational risks (material shortages, delivery delays, blockers) |
 
+### Manager Decision Center APIs (Phase 6)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/projects/{id}/dashboard` | Master Manager Decision Center API consolidating executive health KPIs, prioritized attention queue, safety risks, area rankings, recurring problems, PPE distribution, and chronological activity feed. Supports `days` (24h/7d/30d), `site_id`, `area_id` filters. |
+
 ---
 
 ## 9. Phase Completion Status
@@ -292,6 +297,15 @@ The Next.js frontend will start at `http://localhost:3000`.
   - Clear separation of concerns: Operational risk (material shortages & daily blockers) isolated from Safety Risk
   - Data confidence rating (`LOW`, `MEDIUM`, `HIGH`) preventing false sense of security on inactive projects
   - Full-featured interactive Next.js Intelligence Dashboard at `/projects/[id]/intelligence`
+- [x] **Phase 6: Manager Decision Center**
+  - Unified Executive Command Center combining field data (Phase 3), AI vision (Phase 4), and intelligence analytics (Phase 5)
+  - Master consolidated API: `GET /api/projects/{id}/dashboard` with multi-dimensional filtering (`days`: 1d/7d/30d, `site_id`, `area_id`)
+  - Executive health cards: Risk score & level, Progress %, Open safety issues, Open observations, Operational blockers, and Data confidence rating
+  - Deterministic **"What Needs Attention?"** prioritized queue sorted by severity (`CRITICAL` $\rightarrow$ `HIGH` $\rightarrow$ `MEDIUM` $\rightarrow$ `LOW`) with direct module action links
+  - Area risk ranking table, Safety risk reasons, Recurring problems, PPE violation distribution, Human incidents, Inspections lifecycle, Timeline trend visualizer, and Recent activity stream
+  - Dedicated Next.js Manager Decision Center page at `/projects/[id]/dashboard` with interactive filters and quick action navigation
+  - 100% automated test coverage in `backend/test_phase6_suite.py` + complete regression pass across Phases 1-5
+
 
 
 

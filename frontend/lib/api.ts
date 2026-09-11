@@ -783,3 +783,73 @@ export const getOperationalRisk = (
 };
 
 
+// ==========================================
+// PHASE 6: MANAGER DECISION CENTER
+// ==========================================
+
+export interface AttentionItem {
+  id: string;
+  priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  title: string;
+  description: string;
+  category: "SAFETY_INCIDENT" | "AI_PPE" | "INSPECTION" | "OBSERVATION" | "MATERIAL" | "PROGRESS" | "RISK";
+  action_url: string;
+  action_label: string;
+  created_at?: string | null;
+}
+
+export interface ExecutiveHealth {
+  risk_score: number;
+  risk_level: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  risk_trend: "INCREASING" | "DECREASING" | "STABLE";
+  risk_change_pct: number;
+  progress_pct?: number | null;
+  progress_trend: "IMPROVING" | "DECLINING" | "STABLE";
+  open_safety_issues: number;
+  open_observations: number;
+  operational_blockers: number;
+  data_confidence: "LOW" | "MEDIUM" | "HIGH";
+}
+
+export interface DashboardProjectMeta {
+  id: number;
+  name: string;
+  description?: string | null;
+  location?: string | null;
+  status: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  site_count: number;
+  area_count: number;
+  member_count: number;
+  last_updated: string;
+}
+
+export interface ManagerDashboardData {
+  project: DashboardProjectMeta;
+  executive_health: ExecutiveHealth;
+  attention_items: AttentionItem[];
+  risk: RiskExplanation;
+  area_risk: AreaRiskRankingItem[];
+  recurring_problems: RecurringIssue[];
+  safety: SafetySummary;
+  progress: ProgressIntelligence;
+  materials: OperationalRisk;
+  trends: ProjectTrends;
+  recent_activity: ActivityItem[];
+}
+
+export const getProjectDashboard = (
+  projectId: number,
+  options?: { days?: number; site_id?: number; area_id?: number }
+) => {
+  const params = new URLSearchParams();
+  if (options?.days !== undefined) params.append("days", String(options.days));
+  if (options?.site_id !== undefined) params.append("site_id", String(options.site_id));
+  if (options?.area_id !== undefined) params.append("area_id", String(options.area_id));
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return request<ManagerDashboardData>(`/api/projects/${projectId}/dashboard${query}`);
+};
+
+
+

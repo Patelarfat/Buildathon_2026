@@ -11,6 +11,7 @@ export default function ProjectNav({ projectId }: ProjectNavProps) {
   const pathname = usePathname();
 
   const tabs = [
+    { label: "Manager Dashboard", href: `/projects/${projectId}/dashboard`, icon: "🎯" },
     { label: "Overview & Structure", href: `/projects/${projectId}`, icon: "🏗️" },
     { label: "Intelligence Engine", href: `/projects/${projectId}/intelligence`, icon: "🧠" },
     { label: "Site Photos", href: `/projects/${projectId}/photos`, icon: "📸" },

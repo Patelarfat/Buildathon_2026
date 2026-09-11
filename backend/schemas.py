@@ -961,3 +961,60 @@ class ProjectIntelligenceResponse(BaseModel):
     operational_risk: OperationalRiskResponse
 
 
+# ==========================================
+# PHASE 6: MANAGER DECISION CENTER SCHEMAS
+# ==========================================
+
+class AttentionItem(BaseModel):
+    id: str
+    priority: str  # CRITICAL, HIGH, MEDIUM, LOW
+    title: str
+    description: str
+    category: str  # SAFETY_INCIDENT, AI_PPE, INSPECTION, OBSERVATION, MATERIAL, PROGRESS, RISK
+    action_url: str
+    action_label: str
+    created_at: Optional[str] = None
+
+
+class ExecutiveHealth(BaseModel):
+    risk_score: int
+    risk_level: str
+    risk_trend: str
+    risk_change_pct: float
+    progress_pct: Optional[int] = None
+    progress_trend: str
+    open_safety_issues: int
+    open_observations: int
+    operational_blockers: int
+    data_confidence: str
+
+
+class DashboardProjectMeta(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    location: Optional[str] = None
+    status: str
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    site_count: int
+    area_count: int
+    member_count: int
+    last_updated: str
+
+
+class ManagerDashboardResponse(BaseModel):
+    project: DashboardProjectMeta
+    executive_health: ExecutiveHealth
+    attention_items: List[AttentionItem] = []
+    risk: RiskExplanationResponse
+    area_risk: List[AreaRiskRankingItem] = []
+    recurring_problems: List[RecurringIssueResponse] = []
+    safety: SafetySummaryResponse
+    progress: ProgressIntelligenceResponse
+    materials: OperationalRiskResponse
+    trends: ProjectTrendsResponse
+    recent_activity: List[ActivityItemResponse] = []
+
+
+
