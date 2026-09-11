@@ -5,6 +5,7 @@ from sqlalchemy import func
 
 import models
 import schemas
+from services.ppe_constants import AI_PPE_VIOLATION_TYPES
 from services.risk_engine import RiskEngine
 from services.recurring_issue_service import RecurringIssueService
 from services.trend_service import TrendService
@@ -145,12 +146,13 @@ class DashboardService:
                 "action_label": "Review Recurring Zone"
             })
 
-        # E. High Severity AI Findings
+        # E. High Severity AI Findings (Actual Violations only)
         high_ai_findings = (
             db.query(models.AISafetyFinding)
             .filter(
                 models.AISafetyFinding.project_id == project_id,
                 models.AISafetyFinding.status == "OPEN",
+                models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
                 models.AISafetyFinding.severity.in_(["HIGH", "CRITICAL"]),
                 models.AISafetyFinding.created_at >= cutoff_date
             )
@@ -217,8 +219,8 @@ class DashboardService:
         priority_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
         attention_items.sort(key=lambda x: priority_order.get(x["priority"], 99))
 
-        # 4. Executive Health Summary
-        open_safety_count = safety_summary["ai_findings_open"] + safety_summary["human_incidents_open"]
+        # 4. Executive Health Summary (using actual open violations)
+        open_safety_count = safety_summary.get("ai_violations_open", 0) + safety_summary["human_incidents_open"]
         open_obs_count = safety_summary["observations_open"]
         op_blockers_count = len(operational_risk["low_stock_materials"]) + len(operational_risk["open_blockers"])
 

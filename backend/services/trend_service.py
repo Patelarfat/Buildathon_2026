@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 import models
+from services.ppe_constants import AI_PPE_VIOLATION_TYPES
 
 DEFAULT_TREND_TOLERANCE_PCT = 10.0
 
@@ -27,14 +28,16 @@ class TrendService:
         previous_cutoff = now - timedelta(days=2 * days)
 
         # 1. Query Current Period Counts
-        # A. AI Findings
+        # A. AI Findings (Actual Violations only)
         ai_curr_q = db.query(func.count(models.AISafetyFinding.id)).filter(
             models.AISafetyFinding.project_id == project_id,
+            models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
             models.AISafetyFinding.created_at >= current_cutoff,
             models.AISafetyFinding.status != "FALSE_POSITIVE"
         )
         ai_prev_q = db.query(func.count(models.AISafetyFinding.id)).filter(
             models.AISafetyFinding.project_id == project_id,
+            models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
             models.AISafetyFinding.created_at >= previous_cutoff,
             models.AISafetyFinding.created_at < current_cutoff,
             models.AISafetyFinding.status != "FALSE_POSITIVE"
@@ -151,6 +154,7 @@ class TrendService:
 
             day_ai = db.query(func.count(models.AISafetyFinding.id)).filter(
                 models.AISafetyFinding.project_id == project_id,
+                models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
                 models.AISafetyFinding.created_at >= day_start,
                 models.AISafetyFinding.created_at < day_end,
                 models.AISafetyFinding.status != "FALSE_POSITIVE"

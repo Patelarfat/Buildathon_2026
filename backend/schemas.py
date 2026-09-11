@@ -909,6 +909,8 @@ class SafetySummaryResponse(BaseModel):
     time_window_days: int
     ai_findings_total: int
     ai_findings_open: int
+    ai_violations_total: int = 0
+    ai_violations_open: int = 0
     human_incidents_total: int
     human_incidents_open: int
     observations_total: int

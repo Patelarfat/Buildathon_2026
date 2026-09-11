@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 import models
+from services.ppe_constants import AI_PPE_VIOLATION_TYPES, AI_PPE_COMPLIANCE_TYPES
 from services.risk_engine import RiskEngine
 from services.recurring_issue_service import RecurringIssueService
 from services.trend_service import TrendService
@@ -39,9 +40,10 @@ class IntelligenceService:
                 days=days
             )
 
-            # Counts for table display
+            # Counts for table display (Violations only for AI)
             ai_count = db.query(func.count(models.AISafetyFinding.id)).filter(
                 models.AISafetyFinding.area_id == area.id,
+                models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
                 models.AISafetyFinding.created_at >= cutoff_date,
                 models.AISafetyFinding.status != "FALSE_POSITIVE"
             ).scalar() or 0
@@ -112,17 +114,22 @@ class IntelligenceService:
         ai_total = len(all_ai)
         ai_open = sum(1 for f in all_ai if f.status == "OPEN")
 
-        # PPE Breakdown
-        no_helmet = sum(1 for f in all_ai if "HELMET" in f.finding_type.upper() or "NO_HELMET" in f.finding_type.upper())
-        no_gloves = sum(1 for f in all_ai if "GLOVE" in f.finding_type.upper() or "NO_GLOVES" in f.finding_type.upper())
-        no_boots = sum(1 for f in all_ai if "BOOT" in f.finding_type.upper() or "NO_BOOTS" in f.finding_type.upper())
-        no_goggles = sum(1 for f in all_ai if "GOGGLE" in f.finding_type.upper() or "NO_GOGGLE" in f.finding_type.upper())
-        other_viol = ai_total - (no_helmet + no_gloves + no_boots + no_goggles)
-        if other_viol < 0:
-            other_viol = 0
+        # Separate actual violations from compliant detections
+        violations_list = [f for f in all_ai if f.finding_type in AI_PPE_VIOLATION_TYPES]
+        ai_viol_total = len(violations_list)
+        ai_viol_open = sum(1 for f in violations_list if f.status == "OPEN")
+
+        # Exact PPE Breakdown for actual violations
+        no_helmet = sum(1 for f in all_ai if f.finding_type == "PERSON_WITHOUT_HELMET")
+        no_gloves = sum(1 for f in all_ai if f.finding_type == "PERSON_WITHOUT_GLOVES")
+        no_boots = sum(1 for f in all_ai if f.finding_type == "PERSON_WITHOUT_BOOTS")
+        no_goggles = sum(1 for f in all_ai if f.finding_type == "PERSON_WITHOUT_GOGGLES")
+        other_viol = sum(1 for f in all_ai if f.finding_type in AI_PPE_VIOLATION_TYPES and f.finding_type not in {
+            "PERSON_WITHOUT_HELMET", "PERSON_WITHOUT_GLOVES", "PERSON_WITHOUT_BOOTS", "PERSON_WITHOUT_GOGGLES"
+        })
 
         # Compliant AI findings
-        compliant_cnt = sum(1 for f in all_ai if "COMPLIANT" in f.finding_type.upper())
+        compliant_cnt = sum(1 for f in all_ai if f.finding_type in AI_PPE_COMPLIANCE_TYPES or f.severity.upper() == "INFO")
 
         # 2. Human Incidents
         inc_q = db.query(models.SafetyIncident).filter(
@@ -200,6 +207,8 @@ class IntelligenceService:
             "time_window_days": days,
             "ai_findings_total": ai_total,
             "ai_findings_open": ai_open,
+            "ai_violations_total": ai_viol_total,
+            "ai_violations_open": ai_viol_open,
             "human_incidents_total": inc_total,
             "human_incidents_open": inc_open,
             "observations_total": obs_total,

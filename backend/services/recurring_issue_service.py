@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 
 import models
+from services.ppe_constants import AI_PPE_VIOLATION_TYPES
 
 DEFAULT_RECURRING_THRESHOLD = 3
 DEFAULT_RECURRING_WINDOW_DAYS = 7
@@ -27,7 +28,7 @@ class RecurringIssueService:
         cutoff_date = datetime.utcnow() - timedelta(days=days)
         recurring_list: List[Dict[str, Any]] = []
 
-        # 1. AI Safety Findings
+        # 1. AI Safety Findings (Violations only)
         ai_query = (
             db.query(
                 models.AISafetyFinding.site_id,
@@ -40,6 +41,7 @@ class RecurringIssueService:
             )
             .filter(
                 models.AISafetyFinding.project_id == project_id,
+                models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
                 models.AISafetyFinding.created_at >= cutoff_date,
                 models.AISafetyFinding.status != "FALSE_POSITIVE"
             )

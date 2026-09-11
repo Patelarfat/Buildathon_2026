@@ -656,6 +656,8 @@ export interface SafetySummary {
   time_window_days: number;
   ai_findings_total: number;
   ai_findings_open: number;
+  ai_violations_total?: number;
+  ai_violations_open?: number;
   human_incidents_total: number;
   human_incidents_open: number;
   observations_total: number;

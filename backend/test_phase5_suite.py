@@ -149,7 +149,7 @@ def run_tests():
                 project_id=project_id,
                 site_id=site_id,
                 area_id=area1_id,
-                finding_type="NO_HELMET",
+                finding_type="PERSON_WITHOUT_HELMET",
                 severity="HIGH",
                 title="Missing Safety Helmet",
                 description="Worker observed in Floor 1 without protective headgear",
@@ -165,7 +165,7 @@ def run_tests():
             project_id=project_id,
             site_id=site_id,
             area_id=area2_id,
-            finding_type="NO_GLOVES",
+            finding_type="PERSON_WITHOUT_GLOVES",
             severity="LOW",
             title="Missing Gloves",
             description="Worker handling materials without gloves",
@@ -290,7 +290,7 @@ def run_tests():
     status, rec_issues = request("GET", f"/api/projects/{project_id}/recurring-issues")
     assert status == 200
     assert len(rec_issues) >= 1
-    no_helmet_rec = next((ri for ri in rec_issues if ri["issue_type"] == "NO_HELMET"), None)
+    no_helmet_rec = next((ri for ri in rec_issues if ri["issue_type"] == "PERSON_WITHOUT_HELMET"), None)
     assert no_helmet_rec is not None
     assert no_helmet_rec["occurrence_count"] >= 3
     assert no_helmet_rec["area_name"] == "Floor 1"

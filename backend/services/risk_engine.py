@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 import models
+from services.ppe_constants import AI_PPE_VIOLATION_TYPES
 from services.recurring_issue_service import RecurringIssueService
 from services.trend_service import TrendService
 
@@ -41,11 +42,12 @@ class RiskEngine:
         reasons: List[str] = []
 
         # -------------------------------------------------------------
-        # 1. Component A: AI Safety Findings (OPEN only)
+        # 1. Component A: AI Safety Findings (OPEN Violations only)
         # -------------------------------------------------------------
         ai_query = db.query(models.AISafetyFinding).filter(
             models.AISafetyFinding.project_id == project_id,
             models.AISafetyFinding.status == "OPEN",
+            models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
             models.AISafetyFinding.created_at >= cutoff_date
         )
         if site_id:
@@ -54,7 +56,7 @@ class RiskEngine:
             ai_query = ai_query.filter(models.AISafetyFinding.area_id == area_id)
 
         open_ai_findings = ai_query.all()
-        raw_ai_score = sum(cls.AI_FINDING_WEIGHTS.get(f.severity.upper(), 5.0) for f in open_ai_findings)
+        raw_ai_score = sum(cls.AI_FINDING_WEIGHTS.get(f.severity.upper(), 0.0) for f in open_ai_findings)
         ai_score = min(raw_ai_score, cls.AI_FINDING_CAP)
 
         high_ai = sum(1 for f in open_ai_findings if f.severity.upper() in ["HIGH", "CRITICAL"])
