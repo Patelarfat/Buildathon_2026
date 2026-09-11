@@ -6,11 +6,14 @@ import Link from "next/link";
 import {
   ProjectDetail,
   ProjectStatus,
+  ActivityItem,
   getProject,
+  getProjectActivity,
   updateProject,
   deleteProject,
 } from "../../../lib/api";
 import { statusColors } from "../../../components/ProjectCard";
+import ProjectNav from "../../../components/ProjectNav";
 import SiteList from "../../../components/SiteList";
 import MemberList from "../../../components/MemberList";
 
@@ -24,6 +27,7 @@ export default function ProjectDetailPage({
   const router = useRouter();
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,14 +45,18 @@ export default function ProjectDetailPage({
     setLoading(true);
     setError(null);
     try {
-      const data = await getProject(projectId);
-      setProject(data);
-      setName(data.name);
-      setDescription(data.description || "");
-      setLocation(data.location || "");
-      setStatus(data.status);
-      setStartDate(data.start_date || "");
-      setEndDate(data.end_date || "");
+      const [projData, activityData] = await Promise.all([
+        getProject(projectId),
+        getProjectActivity(projectId).catch(() => []),
+      ]);
+      setProject(projData);
+      setActivities(activityData);
+      setName(projData.name);
+      setDescription(projData.description || "");
+      setLocation(projData.location || "");
+      setStatus(projData.status);
+      setStartDate(projData.start_date || "");
+      setEndDate(projData.end_date || "");
     } catch (err: any) {
       setError(err.message || "Failed to load project");
     } finally {
@@ -140,6 +148,15 @@ export default function ProjectDetailPage({
     border: "border-slate-700",
   };
 
+  const fieldModules = [
+    { title: "Site Photos", desc: "Inspection & visual captures", icon: "📸", href: `/projects/${projectId}/photos`, count: activities.filter(a => a.type === "PHOTO").length },
+    { title: "Daily Reports", desc: "Shift progress & manpower logs", icon: "📋", href: `/projects/${projectId}/daily-reports`, count: activities.filter(a => a.type === "REPORT").length },
+    { title: "Safety Incidents", desc: "PPE & hazard violation logs", icon: "⚠️", href: `/projects/${projectId}/incidents`, count: activities.filter(a => a.type === "INCIDENT").length },
+    { title: "Inspections", desc: "Quality & equipment audits", icon: "🔍", href: `/projects/${projectId}/inspections`, count: activities.filter(a => a.type === "INSPECTION").length },
+    { title: "Observations", desc: "Defects & recurring snags", icon: "👁️", href: `/projects/${projectId}/observations`, count: activities.filter(a => a.type === "OBSERVATION").length },
+    { title: "Materials", desc: "Stock & delivery inventory", icon: "🧱", href: `/projects/${projectId}/materials`, count: activities.filter(a => a.type === "MATERIAL").length },
+  ];
+
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Breadcrumb & Top Actions */}
@@ -167,6 +184,8 @@ export default function ProjectDetailPage({
           </button>
         </div>
       </div>
+
+      <ProjectNav projectId={projectId} />
 
       {/* Edit Form or Info Card */}
       {isEditing ? (
@@ -321,6 +340,38 @@ export default function ProjectDetailPage({
         </div>
       )}
 
+      {/* Field Data Modules Quick Navigation Grid */}
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold text-white flex items-center space-x-2">
+          <span>📡 Field Data Collection Modules (Phase 3)</span>
+        </h3>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {fieldModules.map((mod) => (
+            <Link
+              key={mod.href}
+              href={mod.href}
+              className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-blue-500/50 hover:bg-slate-800/50 transition-all flex flex-col justify-between group shadow-lg"
+            >
+              <div>
+                <div className="text-2xl mb-2">{mod.icon}</div>
+                <h4 className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">
+                  {mod.title}
+                </h4>
+                <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">
+                  {mod.desc}
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
+                <span className="text-slate-500">Records:</span>
+                <span className="font-bold text-blue-400 bg-blue-950/50 border border-blue-900/50 px-1.5 py-0.2 rounded">
+                  {mod.count}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Main Content Grid: Sites on Left/Top, Members on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         {/* Sites & Areas */}
@@ -336,6 +387,64 @@ export default function ProjectDetailPage({
           members={project.members || []}
           onMembersChanged={loadProject}
         />
+      </div>
+
+      {/* Unified Activity Feed */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 className="text-base font-bold text-white flex items-center space-x-2">
+            <span>⚡ Recent Project Activity & Evidence Stream</span>
+            <span className="text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
+              {activities.length} Events
+            </span>
+          </h3>
+          <span className="text-xs text-slate-400">Real-Time Traceability</span>
+        </div>
+
+        {activities.length === 0 ? (
+          <p className="text-xs text-slate-400 py-6 text-center italic">
+            No field activity recorded yet. Start by uploading site photos, logging daily reports, or recording inspections.
+          </p>
+        ) : (
+          <div className="divide-y divide-slate-800/60 max-h-96 overflow-y-auto pr-1">
+            {activities.slice(0, 15).map((act, idx) => (
+              <div key={idx} className="py-3 flex items-start justify-between gap-4 text-xs">
+                <div className="flex items-start space-x-3">
+                  <span className="text-base mt-0.5">
+                    {act.type === "PHOTO" && "📸"}
+                    {act.type === "REPORT" && "📋"}
+                    {act.type === "INCIDENT" && "⚠️"}
+                    {act.type === "INSPECTION" && "🔍"}
+                    {act.type === "OBSERVATION" && "👁️"}
+                    {act.type === "MATERIAL" && "🧱"}
+                  </span>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <strong className="text-slate-100">{act.title}</strong>
+                      <span className="px-1.5 py-0.2 text-[10px] uppercase font-bold bg-slate-800 text-slate-300 rounded">
+                        {act.type}
+                      </span>
+                    </div>
+                    {act.description && (
+                      <p className="text-slate-400 text-[11px] mt-0.5 line-clamp-1">
+                        {act.description}
+                      </p>
+                    )}
+                    <div className="flex items-center space-x-3 text-[10px] text-slate-500 mt-1">
+                      {act.site_name && <span>Site: {act.site_name}</span>}
+                      {act.area_name && <span>Area: {act.area_name}</span>}
+                      {act.user_name && <span>By: {act.user_name}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right text-[11px] text-slate-400 shrink-0">
+                  <span>{act.date}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );

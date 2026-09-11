@@ -1,15 +1,31 @@
+import os
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from database import engine, Base
 import models
-from routers import projects, sites, areas, users
+from routers import (
+    projects,
+    sites,
+    areas,
+    users,
+    photos,
+    daily_reports,
+    incidents,
+    inspections,
+    observations,
+    materials,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(os.path.join(UPLOAD_DIR, "photos"), exist_ok=True)
 
 
 @asynccontextmanager
@@ -24,8 +40,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Construction Site Intelligence API",
-    description="Backend API for Construction Site Intelligence Platform - Project Management",
-    version="0.2.0",
+    description="Backend API for Construction Site Intelligence Platform - Field Data Collection & Project Management",
+    version="0.3.0",
     lifespan=lifespan
 )
 
@@ -42,11 +58,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve uploaded static assets (photos)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
 # Include API Routers
 app.include_router(projects.router)
 app.include_router(sites.router)
 app.include_router(areas.router)
 app.include_router(users.router)
+app.include_router(photos.router)
+app.include_router(daily_reports.router)
+app.include_router(incidents.router)
+app.include_router(inspections.router)
+app.include_router(observations.router)
+app.include_router(materials.router)
 
 
 @app.get("/")
@@ -71,4 +96,5 @@ def db_health():
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Database connection failed: {str(e)}"
         )
+
 

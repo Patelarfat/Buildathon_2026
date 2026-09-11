@@ -199,6 +199,41 @@ The Next.js frontend will start at `http://localhost:3000`.
 | `PUT` | `/api/projects/{project_id}/members/{user_id}` | Update member role |
 | `DELETE` | `/api/projects/{project_id}/members/{user_id}` | Remove user from project |
 
+### Field Data Collection APIs (Phase 3)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/photos` | Upload field photo (multipart/form-data with safe disk storage) |
+| `GET` | `/api/projects/{project_id}/photos` | List photos for a project |
+| `GET` | `/api/sites/{site_id}/photos` | List photos for a site |
+| `GET` | `/api/photos/{photo_id}` | Get single photo metadata |
+| `DELETE` | `/api/photos/{photo_id}` | Delete photo record & disk file |
+| `POST` | `/api/daily-reports` | Create daily site progress & workforce report |
+| `GET` | `/api/daily-reports` | List daily reports (filterable by project, site, date) |
+| `GET` | `/api/daily-reports/{id}` | Get daily report details |
+| `PUT` | `/api/daily-reports/{id}` | Update daily report |
+| `DELETE` | `/api/daily-reports/{id}` | Delete daily report |
+| `POST` | `/api/incidents` | Log safety incident / near-miss / hazard |
+| `GET` | `/api/incidents` | List safety incidents (filterable by project, site, severity, status) |
+| `GET` | `/api/incidents/{id}` | Get incident details |
+| `PUT` | `/api/incidents/{id}` | Update incident / resolution status |
+| `DELETE` | `/api/incidents/{id}` | Delete safety incident |
+| `POST` | `/api/inspections` | Record site inspection report |
+| `GET` | `/api/inspections` | List inspection reports (filterable by project, site, type, status) |
+| `GET` | `/api/inspections/{id}` | Get inspection details |
+| `PUT` | `/api/inspections/{id}` | Update inspection status / findings |
+| `DELETE` | `/api/inspections/{id}` | Delete inspection report |
+| `POST` | `/api/observations` | Record site issue / observation / hazard |
+| `GET` | `/api/observations` | List observations (filterable by project, site, priority, status) |
+| `GET` | `/api/observations/{id}` | Get observation details |
+| `PUT` | `/api/observations/{id}` | Update observation priority / status / resolution |
+| `DELETE` | `/api/observations/{id}` | Delete observation |
+| `POST` | `/api/materials` | Log incoming material delivery / consumption |
+| `GET` | `/api/materials` | List materials (filterable by project, site, status) |
+| `GET` | `/api/materials/{id}` | Get material details |
+| `PUT` | `/api/materials/{id}` | Update material quantity / status |
+| `DELETE` | `/api/materials/{id}` | Delete material record |
+| `GET` | `/api/projects/{project_id}/activity` | Consolidated chronological project activity stream |
+
 ---
 
 ## 9. Phase Completion Status
@@ -213,3 +248,10 @@ The Next.js frontend will start at `http://localhost:3000`.
   - Modular REST APIs with routers & Pydantic validation
   - Responsive Project Management UI with complete CRUD
   - End-to-end regression & persistence verification
+- [x] **Phase 3: Field Data Collection**
+  - Data models: SitePhotos, DailyReports, SafetyIncidents, InspectionReports, Observations, Materials
+  - Strict relationship validation (`validate_hierarchy` checking project-site-area-user links)
+  - Safe file upload handling (`/uploads/photos/` with static serving)
+  - 6 dedicated field module pages under `/projects/[id]/` + consolidated activity feed
+  - 100% test suite verification across all CRUD operations & edge cases
+

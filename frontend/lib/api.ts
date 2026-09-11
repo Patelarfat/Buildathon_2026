@@ -1,5 +1,6 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+// --- Types ---
 export type ProjectStatus = "PLANNING" | "ACTIVE" | "ON_HOLD" | "COMPLETED";
 
 export type ProjectRole =
@@ -8,6 +9,50 @@ export type ProjectRole =
   | "SAFETY_OFFICER"
   | "CONTRACTOR"
   | "ADMIN";
+
+export type IncidentType =
+  | "PPE_VIOLATION"
+  | "FALL"
+  | "INJURY"
+  | "EQUIPMENT_ACCIDENT"
+  | "UNSAFE_BEHAVIOR"
+  | "UNSAFE_CONDITION"
+  | "OTHER";
+
+export type IncidentSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type IncidentStatus = "OPEN" | "UNDER_REVIEW" | "RESOLVED";
+
+export type InspectionType =
+  | "SAFETY"
+  | "QUALITY"
+  | "EQUIPMENT"
+  | "ENVIRONMENTAL"
+  | "GENERAL";
+
+export type InspectionStatus =
+  | "OPEN"
+  | "PASSED"
+  | "FAILED"
+  | "REQUIRES_ACTION";
+
+export type ObservationType =
+  | "PROGRESS"
+  | "SAFETY"
+  | "QUALITY"
+  | "MATERIAL"
+  | "EQUIPMENT"
+  | "GENERAL";
+
+export type PriorityLevel = "LOW" | "MEDIUM" | "HIGH";
+
+export type ObservationStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED";
+
+export type MaterialStatus =
+  | "ORDERED"
+  | "DELIVERED"
+  | "IN_USE"
+  | "LOW_STOCK";
 
 export interface User {
   id: number;
@@ -63,16 +108,158 @@ export interface ProjectDetail extends Project {
   members: ProjectMember[];
 }
 
+// --- Phase 3 Entities ---
+export interface SitePhoto {
+  id: number;
+  project_id: number;
+  site_id: number;
+  area_id?: number | null;
+  uploaded_by: number;
+  file_name: string;
+  file_path: string;
+  caption?: string | null;
+  taken_at?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  created_at: string;
+  uploader?: User | null;
+  site?: Site | null;
+  area?: Area | null;
+}
+
+export interface DailyReport {
+  id: number;
+  project_id: number;
+  site_id: number;
+  area_id?: number | null;
+  reported_by: number;
+  report_date: string;
+  work_completed?: string | null;
+  work_planned?: string | null;
+  progress_percentage?: number | null;
+  workers_count?: number | null;
+  weather?: string | null;
+  equipment_used?: string | null;
+  materials_used?: string | null;
+  issues?: string | null;
+  blockers?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  reporter?: User | null;
+  site?: Site | null;
+  area?: Area | null;
+}
+
+export interface SafetyIncident {
+  id: number;
+  project_id: number;
+  site_id: number;
+  area_id?: number | null;
+  reported_by: number;
+  incident_date: string;
+  incident_type: IncidentType;
+  severity: IncidentSeverity;
+  description: string;
+  action_taken?: string | null;
+  status: IncidentStatus;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  reporter?: User | null;
+  site?: Site | null;
+  area?: Area | null;
+}
+
+export interface InspectionReport {
+  id: number;
+  project_id: number;
+  site_id: number;
+  area_id?: number | null;
+  inspector_id: number;
+  inspection_date: string;
+  inspection_type: InspectionType;
+  status: InspectionStatus;
+  findings?: string | null;
+  recommendations?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  inspector?: User | null;
+  site?: Site | null;
+  area?: Area | null;
+}
+
+export interface Observation {
+  id: number;
+  project_id: number;
+  site_id: number;
+  area_id?: number | null;
+  created_by: number;
+  observation_type: ObservationType;
+  title: string;
+  description: string;
+  priority: PriorityLevel;
+  status: ObservationStatus;
+  assigned_to?: number | null;
+  observed_at?: string | null;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  creator?: User | null;
+  assignee?: User | null;
+  site?: Site | null;
+  area?: Area | null;
+}
+
+export interface Material {
+  id: number;
+  project_id: number;
+  site_id: number;
+  area_id?: number | null;
+  recorded_by: number;
+  material_name: string;
+  category?: string | null;
+  quantity: number;
+  unit: string;
+  status: MaterialStatus;
+  supplier?: string | null;
+  delivery_date?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  recorder?: User | null;
+  site?: Site | null;
+  area?: Area | null;
+}
+
+export interface ActivityItem {
+  id: number;
+  type: "PHOTO" | "REPORT" | "INCIDENT" | "INSPECTION" | "OBSERVATION" | "MATERIAL";
+  title: string;
+  description?: string | null;
+  status?: string | null;
+  severity_or_priority?: string | null;
+  site_name?: string | null;
+  area_name?: string | null;
+  user_name?: string | null;
+  date: string;
+  created_at: string;
+}
+
 // Generic API caller with comprehensive error handling
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   try {
+    const isFormData = options?.body instanceof FormData;
+    const headers: Record<string, string> = {
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
+      ...((options?.headers as Record<string, string>) || {}),
+    };
+
     const res = await fetch(url, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options?.headers || {}),
-      },
+      headers,
     });
 
     if (!res.ok) {
@@ -90,7 +277,6 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
       throw new Error(errorMsg);
     }
 
-    // Handle 204 or empty responses
     if (res.status === 204) {
       return {} as T;
     }
@@ -104,7 +290,7 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   }
 }
 
-// Project API
+// --- Project API ---
 export const getProjects = () => request<Project[]>("/api/projects");
 export const getProject = (id: number) => request<ProjectDetail>(`/api/projects/${id}`);
 export const createProject = (data: Partial<Project>) =>
@@ -113,8 +299,10 @@ export const updateProject = (id: number, data: Partial<Project>) =>
   request<Project>(`/api/projects/${id}`, { method: "PUT", body: JSON.stringify(data) });
 export const deleteProject = (id: number) =>
   request<{ message: string }>(`/api/projects/${id}`, { method: "DELETE" });
+export const getProjectActivity = (projectId: number) =>
+  request<ActivityItem[]>(`/api/projects/${projectId}/activity`);
 
-// Site API
+// --- Site API ---
 export const getSitesForProject = (projectId: number) =>
   request<Site[]>(`/api/projects/${projectId}/sites`);
 export const createSite = (projectId: number, data: { name: string; address?: string; description?: string }) =>
@@ -125,7 +313,7 @@ export const updateSite = (siteId: number, data: { name?: string; address?: stri
 export const deleteSite = (siteId: number) =>
   request<{ message: string }>(`/api/sites/${siteId}`, { method: "DELETE" });
 
-// Area API
+// --- Area API ---
 export const getAreasForSite = (siteId: number) =>
   request<Area[]>(`/api/sites/${siteId}/areas`);
 export const createArea = (siteId: number, data: { name: string; area_type?: string; description?: string }) =>
@@ -136,7 +324,7 @@ export const updateArea = (areaId: number, data: { name?: string; area_type?: st
 export const deleteArea = (areaId: number) =>
   request<{ message: string }>(`/api/areas/${areaId}`, { method: "DELETE" });
 
-// Member API
+// --- Member API ---
 export const getProjectMembers = (projectId: number) =>
   request<ProjectMember[]>(`/api/projects/${projectId}/members`);
 export const addProjectMember = (projectId: number, data: { user_id: number; role: ProjectRole }) =>
@@ -146,11 +334,91 @@ export const updateProjectMemberRole = (projectId: number, userId: number, data:
 export const removeProjectMember = (projectId: number, userId: number) =>
   request<{ message: string }>(`/api/projects/${projectId}/members/${userId}`, { method: "DELETE" });
 
-// Users API
+// --- Users API ---
 export const getUsers = () => request<User[]>("/api/users");
 export const createUser = (data: { name: string; email: string; role: string; password?: string }) =>
   request<User>("/api/users", { method: "POST", body: JSON.stringify(data) });
 
-// Health API
+// --- Phase 3: Field Data API ---
+
+// Photos
+export const uploadPhoto = (formData: FormData) =>
+  request<SitePhoto>("/api/photos", { method: "POST", body: formData });
+export const getProjectPhotos = (projectId: number) =>
+  request<SitePhoto[]>(`/api/projects/${projectId}/photos`);
+export const getSitePhotos = (siteId: number) =>
+  request<SitePhoto[]>(`/api/sites/${siteId}/photos`);
+export const getPhoto = (photoId: number) =>
+  request<SitePhoto>(`/api/photos/${photoId}`);
+export const deletePhoto = (photoId: number) =>
+  request<{ message: string }>(`/api/photos/${photoId}`, { method: "DELETE" });
+
+// Daily Reports
+export const createDailyReport = (data: Partial<DailyReport>) =>
+  request<DailyReport>("/api/daily-reports", { method: "POST", body: JSON.stringify(data) });
+export const getDailyReports = (projectId: number) =>
+  request<DailyReport[]>(`/api/projects/${projectId}/daily-reports`);
+export const getDailyReport = (reportId: number) =>
+  request<DailyReport>(`/api/daily-reports/${reportId}`);
+export const updateDailyReport = (reportId: number, data: Partial<DailyReport>) =>
+  request<DailyReport>(`/api/daily-reports/${reportId}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteDailyReport = (reportId: number) =>
+  request<{ message: string }>(`/api/daily-reports/${reportId}`, { method: "DELETE" });
+
+// Safety Incidents
+export const createIncident = (data: Partial<SafetyIncident>) =>
+  request<SafetyIncident>("/api/incidents", { method: "POST", body: JSON.stringify(data) });
+export const getIncidents = (projectId: number) =>
+  request<SafetyIncident[]>(`/api/projects/${projectId}/incidents`);
+export const getSiteIncidents = (siteId: number) =>
+  request<SafetyIncident[]>(`/api/sites/${siteId}/incidents`);
+export const getIncident = (incidentId: number) =>
+  request<SafetyIncident>(`/api/incidents/${incidentId}`);
+export const updateIncident = (incidentId: number, data: Partial<SafetyIncident>) =>
+  request<SafetyIncident>(`/api/incidents/${incidentId}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteIncident = (incidentId: number) =>
+  request<{ message: string }>(`/api/incidents/${incidentId}`, { method: "DELETE" });
+
+// Inspections
+export const createInspection = (data: Partial<InspectionReport>) =>
+  request<InspectionReport>("/api/inspections", { method: "POST", body: JSON.stringify(data) });
+export const getInspections = (projectId: number) =>
+  request<InspectionReport[]>(`/api/projects/${projectId}/inspections`);
+export const getInspection = (inspectionId: number) =>
+  request<InspectionReport>(`/api/inspections/${inspectionId}`);
+export const updateInspection = (inspectionId: number, data: Partial<InspectionReport>) =>
+  request<InspectionReport>(`/api/inspections/${inspectionId}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteInspection = (inspectionId: number) =>
+  request<{ message: string }>(`/api/inspections/${inspectionId}`, { method: "DELETE" });
+
+// Observations
+export const createObservation = (data: Partial<Observation>) =>
+  request<Observation>("/api/observations", { method: "POST", body: JSON.stringify(data) });
+export const getObservations = (projectId: number) =>
+  request<Observation[]>(`/api/projects/${projectId}/observations`);
+export const getSiteObservations = (siteId: number) =>
+  request<Observation[]>(`/api/sites/${siteId}/observations`);
+export const getObservation = (observationId: number) =>
+  request<Observation>(`/api/observations/${observationId}`);
+export const updateObservation = (observationId: number, data: Partial<Observation>) =>
+  request<Observation>(`/api/observations/${observationId}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteObservation = (observationId: number) =>
+  request<{ message: string }>(`/api/observations/${observationId}`, { method: "DELETE" });
+
+// Materials
+export const createMaterial = (data: Partial<Material>) =>
+  request<Material>("/api/materials", { method: "POST", body: JSON.stringify(data) });
+export const getMaterials = (projectId: number) =>
+  request<Material[]>(`/api/projects/${projectId}/materials`);
+export const getSiteMaterials = (siteId: number) =>
+  request<Material[]>(`/api/sites/${siteId}/materials`);
+export const getMaterial = (materialId: number) =>
+  request<Material>(`/api/materials/${materialId}`);
+export const updateMaterial = (materialId: number, data: Partial<Material>) =>
+  request<Material>(`/api/materials/${materialId}`, { method: "PUT", body: JSON.stringify(data) });
+export const deleteMaterial = (materialId: number) =>
+  request<{ message: string }>(`/api/materials/${materialId}`, { method: "DELETE" });
+
+// --- Health API ---
 export const getHealth = () => request<{ status: string }>("/api/health");
 export const getDbHealth = () => request<{ status: string }>("/api/db-health");
