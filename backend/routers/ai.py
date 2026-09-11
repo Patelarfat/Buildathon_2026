@@ -93,6 +93,21 @@ def analyze_photo(
             detail=f"Image file not found on server disk at {photo.file_path}"
         )
 
+    # If force re-analysis, clean up old analysis runs for this photo so findings don't duplicate
+    if force_val:
+        old_runs = db.query(models.AIAnalysisRun).filter(models.AIAnalysisRun.photo_id == photo_id).all()
+        for old_run in old_runs:
+            if old_run.annotated_file_path:
+                ann_file = os.path.basename(old_run.annotated_file_path)
+                ann_disk = os.path.join(UPLOAD_ROOT, "ai", ann_file)
+                if os.path.exists(ann_disk):
+                    try:
+                        os.remove(ann_disk)
+                    except Exception:
+                        pass
+            db.delete(old_run)
+        db.commit()
+
     # 4. Create analysis run in PROCESSING status
     analysis_run = models.AIAnalysisRun(
         photo_id=photo.id,

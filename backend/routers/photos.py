@@ -155,6 +155,17 @@ def delete_photo(photo_id: int, db: Session = Depends(get_db)):
             except Exception:
                 pass
 
+    # Safely remove annotated AI files if present
+    for run in photo.analysis_runs:
+        if run.annotated_file_path:
+            ann_filename = os.path.basename(run.annotated_file_path)
+            ann_disk_path = os.path.join(os.path.dirname(UPLOAD_DIR), "ai", ann_filename)
+            if os.path.exists(ann_disk_path):
+                try:
+                    os.remove(ann_disk_path)
+                except Exception:
+                    pass
+
     db.delete(photo)
     db.commit()
     return {"message": f"Photo {photo_id} deleted successfully"}

@@ -146,6 +146,7 @@ class RiskEngine:
         # -------------------------------------------------------------
         # 6. Component F: Trend Penalty / Bonus
         # -------------------------------------------------------------
+        raw_base = ai_score + inc_score + obs_score + insp_score + recurring_score
         trend_data = TrendService.calculate_project_trends(
             db=db,
             project_id=project_id,
@@ -156,10 +157,10 @@ class RiskEngine:
         safety_trend = trend_data.get("safety_trend", "STABLE")
         change_pct = trend_data.get("safety_change_pct", 0.0)
 
-        if safety_trend == "INCREASING":
+        if raw_base > 0 and safety_trend == "INCREASING":
             trend_score = 10.0
             reasons.append(f"Safety violations increased +{change_pct}% compared with previous period")
-        elif safety_trend == "DECREASING":
+        elif raw_base > 0 and safety_trend == "DECREASING":
             trend_score = -5.0
             reasons.append(f"Safety indicators improved ({change_pct}% reduction vs previous period)")
         else:
@@ -168,7 +169,7 @@ class RiskEngine:
         # -------------------------------------------------------------
         # 7. Total Score & Clamping (0 - 100)
         # -------------------------------------------------------------
-        raw_total = ai_score + inc_score + obs_score + insp_score + recurring_score + trend_score
+        raw_total = raw_base + trend_score
         clamped_score = int(round(max(0.0, min(raw_total, 100.0))))
 
         # -------------------------------------------------------------

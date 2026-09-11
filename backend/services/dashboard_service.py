@@ -92,7 +92,7 @@ class DashboardService:
             })
 
         # B. Unresolved High/Critical Human Incidents
-        high_crit_incidents = (
+        inc_q = (
             db.query(models.SafetyIncident)
             .filter(
                 models.SafetyIncident.project_id == project_id,
@@ -100,8 +100,13 @@ class DashboardService:
                 models.SafetyIncident.severity.in_(["HIGH", "CRITICAL"]),
                 models.SafetyIncident.created_at >= cutoff_date
             )
-            .all()
         )
+        if site_id:
+            inc_q = inc_q.filter(models.SafetyIncident.site_id == site_id)
+        if area_id:
+            inc_q = inc_q.filter(models.SafetyIncident.area_id == area_id)
+        high_crit_incidents = inc_q.all()
+
         if high_crit_incidents:
             attention_items.append({
                 "id": f"inc-high-{project_id}",
@@ -114,15 +119,20 @@ class DashboardService:
             })
 
         # C. Failed Inspections
-        failed_inspections = (
+        insp_q = (
             db.query(models.InspectionReport)
             .filter(
                 models.InspectionReport.project_id == project_id,
                 models.InspectionReport.status == "FAILED",
                 models.InspectionReport.created_at >= cutoff_date
             )
-            .all()
         )
+        if site_id:
+            insp_q = insp_q.filter(models.InspectionReport.site_id == site_id)
+        if area_id:
+            insp_q = insp_q.filter(models.InspectionReport.area_id == area_id)
+        failed_inspections = insp_q.all()
+
         if failed_inspections:
             attention_items.append({
                 "id": f"insp-failed-{project_id}",
@@ -147,17 +157,22 @@ class DashboardService:
             })
 
         # E. High Severity AI Findings (Actual Violations only)
-        high_ai_findings = (
+        ai_q = (
             db.query(models.AISafetyFinding)
             .filter(
                 models.AISafetyFinding.project_id == project_id,
-                models.AISafetyFinding.status == "OPEN",
+                models.AISafetyFinding.status.in_(["OPEN", "REVIEWED"]),
                 models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
                 models.AISafetyFinding.severity.in_(["HIGH", "CRITICAL"]),
                 models.AISafetyFinding.created_at >= cutoff_date
             )
-            .all()
         )
+        if site_id:
+            ai_q = ai_q.filter(models.AISafetyFinding.site_id == site_id)
+        if area_id:
+            ai_q = ai_q.filter(models.AISafetyFinding.area_id == area_id)
+        high_ai_findings = ai_q.all()
+
         if high_ai_findings and not any(a["category"] == "AI_PPE" for a in attention_items):
             attention_items.append({
                 "id": f"ai-high-{project_id}",
@@ -194,7 +209,7 @@ class DashboardService:
             })
 
         # H. Unresolved High Priority Observations
-        high_obs = (
+        obs_q = (
             db.query(models.Observation)
             .filter(
                 models.Observation.project_id == project_id,
@@ -202,8 +217,13 @@ class DashboardService:
                 models.Observation.priority == "HIGH",
                 models.Observation.created_at >= cutoff_date
             )
-            .all()
         )
+        if site_id:
+            obs_q = obs_q.filter(models.Observation.site_id == site_id)
+        if area_id:
+            obs_q = obs_q.filter(models.Observation.area_id == area_id)
+        high_obs = obs_q.all()
+
         if high_obs and not any(a["category"] == "OBSERVATION" for a in attention_items):
             attention_items.append({
                 "id": f"obs-high-{project_id}",
@@ -237,11 +257,16 @@ class DashboardService:
             "data_confidence": risk_eval["data_confidence"]
         }
 
-        # 5. Recent Activity Stream
+        # 5. Recent Activity Stream (Filtered by project, and optionally site/area)
         recent_activity: List[schemas.ActivityItemResponse] = []
 
         # Photos
-        for p in db.query(models.SitePhoto).filter(models.SitePhoto.project_id == project_id).order_by(models.SitePhoto.created_at.desc()).limit(3).all():
+        photo_q = db.query(models.SitePhoto).filter(models.SitePhoto.project_id == project_id)
+        if site_id:
+            photo_q = photo_q.filter(models.SitePhoto.site_id == site_id)
+        if area_id:
+            photo_q = photo_q.filter(models.SitePhoto.area_id == area_id)
+        for p in photo_q.order_by(models.SitePhoto.created_at.desc()).limit(3).all():
             recent_activity.append(schemas.ActivityItemResponse(
                 id=p.id,
                 type="PHOTO",
@@ -257,7 +282,12 @@ class DashboardService:
             ))
 
         # Incidents
-        for inc in db.query(models.SafetyIncident).filter(models.SafetyIncident.project_id == project_id).order_by(models.SafetyIncident.created_at.desc()).limit(3).all():
+        act_inc_q = db.query(models.SafetyIncident).filter(models.SafetyIncident.project_id == project_id)
+        if site_id:
+            act_inc_q = act_inc_q.filter(models.SafetyIncident.site_id == site_id)
+        if area_id:
+            act_inc_q = act_inc_q.filter(models.SafetyIncident.area_id == area_id)
+        for inc in act_inc_q.order_by(models.SafetyIncident.created_at.desc()).limit(3).all():
             recent_activity.append(schemas.ActivityItemResponse(
                 id=inc.id,
                 type="INCIDENT",
@@ -273,7 +303,12 @@ class DashboardService:
             ))
 
         # Reports
-        for r in db.query(models.DailyReport).filter(models.DailyReport.project_id == project_id).order_by(models.DailyReport.created_at.desc()).limit(3).all():
+        act_rep_q = db.query(models.DailyReport).filter(models.DailyReport.project_id == project_id)
+        if site_id:
+            act_rep_q = act_rep_q.filter(models.DailyReport.site_id == site_id)
+        if area_id:
+            act_rep_q = act_rep_q.filter(models.DailyReport.area_id == area_id)
+        for r in act_rep_q.order_by(models.DailyReport.created_at.desc()).limit(3).all():
             recent_activity.append(schemas.ActivityItemResponse(
                 id=r.id,
                 type="REPORT",
@@ -289,7 +324,12 @@ class DashboardService:
             ))
 
         # Inspections
-        for insp in db.query(models.InspectionReport).filter(models.InspectionReport.project_id == project_id).order_by(models.InspectionReport.created_at.desc()).limit(3).all():
+        act_insp_q = db.query(models.InspectionReport).filter(models.InspectionReport.project_id == project_id)
+        if site_id:
+            act_insp_q = act_insp_q.filter(models.InspectionReport.site_id == site_id)
+        if area_id:
+            act_insp_q = act_insp_q.filter(models.InspectionReport.area_id == area_id)
+        for insp in act_insp_q.order_by(models.InspectionReport.created_at.desc()).limit(3).all():
             recent_activity.append(schemas.ActivityItemResponse(
                 id=insp.id,
                 type="INSPECTION",
@@ -305,7 +345,12 @@ class DashboardService:
             ))
 
         # Observations
-        for o in db.query(models.Observation).filter(models.Observation.project_id == project_id).order_by(models.Observation.created_at.desc()).limit(3).all():
+        act_obs_q = db.query(models.Observation).filter(models.Observation.project_id == project_id)
+        if site_id:
+            act_obs_q = act_obs_q.filter(models.Observation.site_id == site_id)
+        if area_id:
+            act_obs_q = act_obs_q.filter(models.Observation.area_id == area_id)
+        for o in act_obs_q.order_by(models.Observation.created_at.desc()).limit(3).all():
             recent_activity.append(schemas.ActivityItemResponse(
                 id=o.id,
                 type="OBSERVATION",
@@ -321,7 +366,12 @@ class DashboardService:
             ))
 
         # Materials
-        for m in db.query(models.Material).filter(models.Material.project_id == project_id).order_by(models.Material.created_at.desc()).limit(3).all():
+        act_mat_q = db.query(models.Material).filter(models.Material.project_id == project_id)
+        if site_id:
+            act_mat_q = act_mat_q.filter(models.Material.site_id == site_id)
+        if area_id:
+            act_mat_q = act_mat_q.filter(models.Material.area_id == area_id)
+        for m in act_mat_q.order_by(models.Material.created_at.desc()).limit(3).all():
             recent_activity.append(schemas.ActivityItemResponse(
                 id=m.id,
                 type="MATERIAL",
