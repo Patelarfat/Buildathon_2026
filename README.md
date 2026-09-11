@@ -232,7 +232,16 @@ The Next.js frontend will start at `http://localhost:3000`.
 | `GET` | `/api/materials/{id}` | Get material details |
 | `PUT` | `/api/materials/{id}` | Update material quantity / status |
 | `DELETE` | `/api/materials/{id}` | Delete material record |
-| `GET` | `/api/projects/{project_id}/activity` | Consolidated chronological project activity stream |
+### AI Computer Vision APIs (Phase 4)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/photos/{id}/analyze` | Run YOLO PPE vision inference on a site photo |
+| `GET` | `/api/photos/{id}/analysis` | Get latest AI analysis run with detections & safety findings |
+| `GET` | `/api/photos/{id}/detections` | Get list of all raw object bounding box detections for photo |
+| `GET` | `/api/projects/{id}/ai-findings` | Get all AI safety findings for a project (filterable by site, area, severity, status) |
+| `GET` | `/api/projects/{id}/ai-summary` | Aggregate AI statistics (analyzed count, open violations, breakdown by severity) |
+| `PATCH` | `/api/ai-findings/{id}` | Human review action (OPEN -> REVIEWED / RESOLVED / FALSE_POSITIVE) |
+| `POST` | `/api/projects/{id}/ai/analyze-pending` | Bulk queue un-analyzed photos for automated batch inference |
 
 ---
 
@@ -254,4 +263,13 @@ The Next.js frontend will start at `http://localhost:3000`.
   - Safe file upload handling (`/uploads/photos/` with static serving)
   - 6 dedicated field module pages under `/projects/[id]/` + consolidated activity feed
   - 100% test suite verification across all CRUD operations & edge cases
+- [x] **Phase 4: Construction PPE Computer Vision**
+  - Fine-tuned lightweight YOLO model (`yolo11n-ppe-finetuned`, `v1.0.0-finetuned-construction-ppe`) on official Ultralytics Construction-PPE dataset
+  - Real validation metrics exported to `backend/ai/model_metadata.json` (mAP50: 0.4442, Precision: 0.8585, Recall: 0.3929)
+  - Database schema: `ai_analysis_runs`, `ai_detections`, `ai_safety_findings` with cascading foreign keys
+  - Inference service with singleton model caching and annotated bounding-box image generation
+  - Deterministic safety rule engine mapping detected PPE states to severity-graded findings
+  - Human-in-the-loop review workflow (`OPEN`, `REVIEWED`, `RESOLVED`, `FALSE_POSITIVE`)
+  - Interactive UI with side-by-side / toggled original vs annotated viewer and real-time AI KPI cards
+
 

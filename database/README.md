@@ -200,6 +200,58 @@
 
 ---
 
+## Schema & Tables (Phase 4 AI Computer Vision Entities)
+
+### 12. `ai_analysis_runs` Table
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | PRIMARY KEY, AUTO_INCREMENT | Unique identifier for AI inference run |
+| `photo_id` | `INTEGER` | FOREIGN KEY (site_photos.id ON DELETE CASCADE), NOT NULL | Analyzed site photo ID |
+| `model_name` | `VARCHAR(100)` | NOT NULL | YOLO model architecture name (`yolo11n-ppe-finetuned`) |
+| `model_version` | `VARCHAR(50)` | NOT NULL | Model version tag (`v1.0.0-finetuned-construction-ppe`) |
+| `status` | `VARCHAR(50)` | NOT NULL, DEFAULT 'PROCESSING' | PROCESSING, COMPLETED, FAILED |
+| `processing_time_ms` | `FLOAT` | NULLABLE | Inference and post-processing latency in milliseconds |
+| `annotated_file_path` | `VARCHAR(500)` | NULLABLE | Web URL path to bounding-box annotated image (`/uploads/ai/...`) |
+| `error_message` | `TEXT` | NULLABLE | Error trace if run failed |
+| `created_at` | `TIMESTAMP` | NOT NULL, AUTO | Run creation timestamp |
+
+### 13. `ai_detections` Table
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | PRIMARY KEY, AUTO_INCREMENT | Unique identifier for detected object |
+| `photo_id` | `INTEGER` | FOREIGN KEY (site_photos.id ON DELETE CASCADE), NOT NULL | Site photo ID |
+| `analysis_run_id` | `INTEGER` | FOREIGN KEY (ai_analysis_runs.id ON DELETE CASCADE), NOT NULL | Parent AI run ID |
+| `project_id` | `INTEGER` | FOREIGN KEY (projects.id ON DELETE CASCADE), NOT NULL | Inherited project ID |
+| `site_id` | `INTEGER` | FOREIGN KEY (sites.id ON DELETE CASCADE), NOT NULL | Inherited site ID |
+| `area_id` | `INTEGER` | FOREIGN KEY (areas.id ON DELETE SET NULL), NULLABLE | Inherited area ID |
+| `class_id` | `INTEGER` | NOT NULL | YOLO class index (0-10) |
+| `class_name` | `VARCHAR(100)` | NOT NULL | YOLO class label (Person, helmet, vest, boots, etc.) |
+| `confidence` | `FLOAT` | NOT NULL | Model prediction confidence score (0.00 to 1.00) |
+| `bbox_x_min` | `FLOAT` | NOT NULL | Normalized bounding box x_min (0.0 to 1.0) |
+| `bbox_y_min` | `FLOAT` | NOT NULL | Normalized bounding box y_min (0.0 to 1.0) |
+| `bbox_x_max` | `FLOAT` | NOT NULL | Normalized bounding box x_max (0.0 to 1.0) |
+| `bbox_y_max` | `FLOAT` | NOT NULL | Normalized bounding box y_max (0.0 to 1.0) |
+| `created_at` | `TIMESTAMP` | NOT NULL, AUTO | Detection timestamp |
+
+### 14. `ai_safety_findings` Table
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | PRIMARY KEY, AUTO_INCREMENT | Unique identifier for AI safety finding |
+| `photo_id` | `INTEGER` | FOREIGN KEY (site_photos.id ON DELETE CASCADE), NOT NULL | Site photo ID |
+| `analysis_run_id` | `INTEGER` | FOREIGN KEY (ai_analysis_runs.id ON DELETE CASCADE), NOT NULL | AI analysis run ID |
+| `project_id` | `INTEGER` | FOREIGN KEY (projects.id ON DELETE CASCADE), NOT NULL | Inherited project ID |
+| `site_id` | `INTEGER` | FOREIGN KEY (sites.id ON DELETE CASCADE), NOT NULL | Inherited site ID |
+| `area_id` | `INTEGER` | FOREIGN KEY (areas.id ON DELETE SET NULL), NULLABLE | Inherited area ID |
+| `finding_type` | `VARCHAR(100)` | NOT NULL | NO_HELMET, NO_VEST, NO_GLOVES, NO_BOOTS, NO_GOGGLES, PPE_COMPLIANT, etc. |
+| `severity` | `VARCHAR(50)` | NOT NULL | INFO, LOW, MEDIUM, HIGH, CRITICAL |
+| `title` | `VARCHAR(255)` | NOT NULL | Finding title summary |
+| `description` | `TEXT` | NOT NULL | Detailed context and observations |
+| `confidence` | `FLOAT` | NOT NULL | Detection confidence score |
+| `status` | `VARCHAR(50)` | NOT NULL, DEFAULT 'OPEN' | Human review status: OPEN, REVIEWED, RESOLVED, FALSE_POSITIVE |
+| `created_at` | `TIMESTAMP` | NOT NULL, AUTO | Finding creation timestamp |
+
+---
+
 ## Verification Queries
 
 To verify database connection and schema:
@@ -217,5 +269,8 @@ To verify database connection and schema:
 \d inspection_reports
 \d observations
 \d materials
+\d ai_analysis_runs
+\d ai_detections
+\d ai_safety_findings
 ```
 

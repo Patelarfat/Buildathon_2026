@@ -422,3 +422,140 @@ export const deleteMaterial = (materialId: number) =>
 // --- Health API ---
 export const getHealth = () => request<{ status: string }>("/api/health");
 export const getDbHealth = () => request<{ status: string }>("/api/db-health");
+
+// ==========================================
+// PHASE 4: AI COMPUTER VISION API
+// ==========================================
+
+export type FindingStatus = "OPEN" | "REVIEWED" | "RESOLVED" | "FALSE_POSITIVE";
+export type FindingSeverity = "HIGH" | "MEDIUM" | "LOW" | "INFO";
+
+export interface AIDetection {
+  id: number;
+  photo_id: number;
+  analysis_run_id: number;
+  project_id: number;
+  site_id: number;
+  area_id?: number | null;
+  class_name: string;
+  confidence: number;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  created_at: string;
+}
+
+export interface AISafetyFinding {
+  id: number;
+  photo_id: number;
+  analysis_run_id: number;
+  project_id: number;
+  site_id: number;
+  area_id?: number | null;
+  finding_type: string;
+  severity: FindingSeverity;
+  title: string;
+  description?: string | null;
+  confidence: number;
+  status: FindingStatus;
+  created_at: string;
+}
+
+export interface AIAnalysisRun {
+  id: number;
+  photo_id: number;
+  model_name: string;
+  model_version: string;
+  status: "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
+  processing_time_ms?: number | null;
+  error_message?: string | null;
+  annotated_file_path?: string | null;
+  created_at: string;
+  detections: AIDetection[];
+  safety_findings: AISafetyFinding[];
+}
+
+export interface AnalysisResult {
+  photo_id: number;
+  analysis_run_id: number;
+  status: string;
+  model_name: string;
+  model_version: string;
+  processing_time_ms?: number | null;
+  detections: AIDetection[];
+  safety_findings: AISafetyFinding[];
+  annotated_image_url?: string | null;
+}
+
+export interface AISummary {
+  project_id: number;
+  total_photos: number;
+  photos_analyzed: number;
+  total_findings: number;
+  open_findings: number;
+  high_severity: number;
+  medium_severity: number;
+  low_severity: number;
+  resolved_findings: number;
+  false_positive_findings: number;
+}
+
+export interface BulkAnalysisResult {
+  project_id: number;
+  total: number;
+  processed: number;
+  successful: number;
+  failed: number;
+  runs: AnalysisResult[];
+}
+
+// Trigger AI analysis on a single photo
+export const analyzePhoto = (photoId: number, force: boolean = false, confidence?: number) => {
+  const params = new URLSearchParams();
+  if (force) params.append("force", "true");
+  if (confidence !== undefined) params.append("confidence", String(confidence));
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return request<AnalysisResult>(`/api/photos/${photoId}/analyze${query}`, { method: "POST" });
+};
+
+// Get existing analysis for a photo
+export const getPhotoAnalysis = (photoId: number) =>
+  request<AIAnalysisRun>(`/api/photos/${photoId}/analysis`);
+
+// Get detections for a photo
+export const getPhotoDetections = (photoId: number) =>
+  request<AIDetection[]>(`/api/photos/${photoId}/detections`);
+
+// Get project AI safety findings with optional filters
+export const getProjectAIFindings = (
+  projectId: number,
+  filters?: { site_id?: number; area_id?: number; severity?: string; finding_type?: string; status?: string }
+) => {
+  const params = new URLSearchParams();
+  if (filters?.site_id) params.append("site_id", String(filters.site_id));
+  if (filters?.area_id) params.append("area_id", String(filters.area_id));
+  if (filters?.severity) params.append("severity", filters.severity);
+  if (filters?.finding_type) params.append("finding_type", filters.finding_type);
+  if (filters?.status) params.append("status", filters.status);
+  const query = params.toString() ? `?${params.toString()}` : "";
+  return request<AISafetyFinding[]>(`/api/projects/${projectId}/ai-findings${query}`);
+};
+
+// Get project AI safety overview KPI summary
+export const getProjectAISummary = (projectId: number) =>
+  request<AISummary>(`/api/projects/${projectId}/ai-summary`);
+
+// Human-in-the-loop review action on AI finding
+export const updateAIFindingStatus = (findingId: number, status: FindingStatus) =>
+  request<AISafetyFinding>(`/api/ai-findings/${findingId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+
+// Bulk analyze unanalyzed photos for a project
+export const bulkAnalyzePendingPhotos = (projectId: number, limit: number = 20) =>
+  request<BulkAnalysisResult>(`/api/projects/${projectId}/ai/analyze-pending?limit=${limit}`, {
+    method: "POST",
+  });
+

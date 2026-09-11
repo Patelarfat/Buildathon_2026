@@ -192,6 +192,11 @@ class SitePhoto(Base):
     area = relationship("Area", back_populates="photos")
     uploader = relationship("User", back_populates="photos")
 
+    analysis_runs = relationship("AIAnalysisRun", back_populates="photo", cascade="all, delete-orphan", order_by="AIAnalysisRun.id.desc()")
+    detections = relationship("AIDetection", back_populates="photo", cascade="all, delete-orphan")
+    safety_findings = relationship("AISafetyFinding", back_populates="photo", cascade="all, delete-orphan")
+
+
 
 class DailyReport(Base):
     __tablename__ = "daily_reports"
@@ -317,4 +322,75 @@ class Material(Base):
     site = relationship("Site", back_populates="materials")
     area = relationship("Area", back_populates="materials")
     recorder = relationship("User", back_populates="materials_recorded")
+
+
+# ==========================================
+# PHASE 4: AI COMPUTER VISION MODELS
+# ==========================================
+
+class AIAnalysisRun(Base):
+    __tablename__ = "ai_analysis_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    photo_id = Column(Integer, ForeignKey("site_photos.id", ondelete="CASCADE"), nullable=False, index=True)
+    model_name = Column(String(100), nullable=False, default="construction-ppe-yolo")
+    model_version = Column(String(50), nullable=False, default="v1")
+    status = Column(String(50), nullable=False, default="QUEUED")  # QUEUED, PROCESSING, COMPLETED, FAILED
+    processing_time_ms = Column(Float, nullable=True)
+    error_message = Column(Text, nullable=True)
+    annotated_file_path = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    photo = relationship("SitePhoto", back_populates="analysis_runs")
+    detections = relationship("AIDetection", back_populates="analysis_run", cascade="all, delete-orphan")
+    safety_findings = relationship("AISafetyFinding", back_populates="analysis_run", cascade="all, delete-orphan")
+
+
+class AIDetection(Base):
+    __tablename__ = "ai_detections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    photo_id = Column(Integer, ForeignKey("site_photos.id", ondelete="CASCADE"), nullable=False, index=True)
+    analysis_run_id = Column(Integer, ForeignKey("ai_analysis_runs.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    site_id = Column(Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=False, index=True)
+    area_id = Column(Integer, ForeignKey("areas.id", ondelete="SET NULL"), nullable=True, index=True)
+    class_name = Column(String(100), nullable=False)
+    confidence = Column(Float, nullable=False)
+    x1 = Column(Float, nullable=False)
+    y1 = Column(Float, nullable=False)
+    x2 = Column(Float, nullable=False)
+    y2 = Column(Float, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    photo = relationship("SitePhoto", back_populates="detections")
+    analysis_run = relationship("AIAnalysisRun", back_populates="detections")
+    project = relationship("Project")
+    site = relationship("Site")
+    area = relationship("Area")
+
+
+class AISafetyFinding(Base):
+    __tablename__ = "ai_safety_findings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    photo_id = Column(Integer, ForeignKey("site_photos.id", ondelete="CASCADE"), nullable=False, index=True)
+    analysis_run_id = Column(Integer, ForeignKey("ai_analysis_runs.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    site_id = Column(Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=False, index=True)
+    area_id = Column(Integer, ForeignKey("areas.id", ondelete="SET NULL"), nullable=True, index=True)
+    finding_type = Column(String(100), nullable=False)
+    severity = Column(String(50), nullable=False)  # HIGH, MEDIUM, LOW, INFO
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    confidence = Column(Float, nullable=False)
+    status = Column(String(50), nullable=False, default="OPEN")  # OPEN, REVIEWED, RESOLVED, FALSE_POSITIVE
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    photo = relationship("SitePhoto", back_populates="safety_findings")
+    analysis_run = relationship("AIAnalysisRun", back_populates="safety_findings")
+    project = relationship("Project")
+    site = relationship("Site")
+    area = relationship("Area")
+
 

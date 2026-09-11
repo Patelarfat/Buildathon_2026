@@ -7,8 +7,10 @@ import {
   ProjectDetail,
   ProjectStatus,
   ActivityItem,
+  AISummary,
   getProject,
   getProjectActivity,
+  getProjectAISummary,
   updateProject,
   deleteProject,
 } from "../../../lib/api";
@@ -28,6 +30,7 @@ export default function ProjectDetailPage({
 
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,12 +48,14 @@ export default function ProjectDetailPage({
     setLoading(true);
     setError(null);
     try {
-      const [projData, activityData] = await Promise.all([
+      const [projData, activityData, aiData] = await Promise.all([
         getProject(projectId),
         getProjectActivity(projectId).catch(() => []),
+        getProjectAISummary(projectId).catch(() => null),
       ]);
       setProject(projData);
       setActivities(activityData);
+      setAiSummary(aiData);
       setName(projData.name);
       setDescription(projData.description || "");
       setLocation(projData.location || "");
@@ -63,6 +68,7 @@ export default function ProjectDetailPage({
       setLoading(false);
     }
   };
+
 
   useEffect(() => {
     if (projectId) {
@@ -372,8 +378,71 @@ export default function ProjectDetailPage({
         </div>
       </div>
 
+      {/* AI PPE Safety Intelligence Summary (Phase 4) */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-indigo-900/50 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-indigo-950">
+          <div>
+            <h3 className="text-base font-bold text-white flex items-center space-x-2">
+              <span>⚡ AI PPE Computer Vision Intelligence (Phase 4)</span>
+              <span className="text-[10px] font-mono bg-indigo-900/60 text-indigo-300 border border-indigo-700/60 px-2 py-0.5 rounded">
+                YOLO v1
+              </span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Automated PPE compliance, violation detection, and human verification monitoring
+            </p>
+          </div>
+          <Link
+            href={`/projects/${projectId}/photos`}
+            className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold self-start sm:self-auto flex items-center space-x-1"
+          >
+            <span>Open Photos & Vision →</span>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
+            <span className="text-[11px] font-medium text-slate-400 block">📸 Photos Analyzed</span>
+            <span className="text-lg font-extrabold text-white mt-1 block">
+              {aiSummary?.photos_analyzed ?? 0} <span className="text-xs font-normal text-slate-500">/ {aiSummary?.total_photos ?? 0}</span>
+            </span>
+          </div>
+          <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
+            <span className="text-[11px] font-medium text-slate-400 block">⚠️ AI Findings</span>
+            <span className="text-lg font-extrabold text-white mt-1 block">
+              {aiSummary?.total_findings ?? 0}
+            </span>
+          </div>
+          <div className="bg-slate-950/70 p-3 rounded-xl border border-rose-950/60">
+            <span className="text-[11px] font-medium text-rose-300 block">🚨 Open Issues</span>
+            <span className="text-lg font-extrabold text-rose-400 mt-1 block">
+              {aiSummary?.open_findings ?? 0}
+            </span>
+          </div>
+          <div className="bg-slate-950/70 p-3 rounded-xl border border-rose-950/60">
+            <span className="text-[11px] font-medium text-rose-300 block">🔴 High Severity</span>
+            <span className="text-lg font-extrabold text-rose-400 mt-1 block">
+              {aiSummary?.high_severity ?? 0}
+            </span>
+          </div>
+          <div className="bg-slate-950/70 p-3 rounded-xl border border-amber-950/60">
+            <span className="text-[11px] font-medium text-amber-300 block">🟡 Medium Severity</span>
+            <span className="text-lg font-extrabold text-amber-400 mt-1 block">
+              {aiSummary?.medium_severity ?? 0}
+            </span>
+          </div>
+          <div className="bg-slate-950/70 p-3 rounded-xl border border-emerald-950/60">
+            <span className="text-[11px] font-medium text-emerald-300 block">✓ Resolved / Reviewed</span>
+            <span className="text-lg font-extrabold text-emerald-400 mt-1 block">
+              {aiSummary?.resolved_findings ?? 0}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content Grid: Sites on Left/Top, Members on Right */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+
         {/* Sites & Areas */}
         <SiteList
           projectId={project.id}

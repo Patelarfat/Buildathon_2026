@@ -654,3 +654,140 @@ class ActivityItemResponse(BaseModel):
     user_name: Optional[str] = None
     date: str
     created_at: datetime
+
+
+# ==========================================
+# PHASE 4: AI COMPUTER VISION SCHEMAS
+# ==========================================
+
+VALID_FINDING_STATUSES = {
+    "OPEN",
+    "REVIEWED",
+    "RESOLVED",
+    "FALSE_POSITIVE"
+}
+
+VALID_FINDING_SEVERITIES = {
+    "HIGH",
+    "MEDIUM",
+    "LOW",
+    "INFO"
+}
+
+
+class AIDetectionResponse(BaseModel):
+    id: int
+    photo_id: int
+    analysis_run_id: int
+    project_id: int
+    site_id: int
+    area_id: Optional[int] = None
+    class_name: str
+    confidence: float
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AISafetyFindingBase(BaseModel):
+    photo_id: int
+    analysis_run_id: int
+    project_id: int
+    site_id: int
+    area_id: Optional[int] = None
+    finding_type: str
+    severity: str
+    title: str
+    description: Optional[str] = None
+    confidence: float
+    status: str = "OPEN"
+
+    @field_validator("status")
+    def validate_status(cls, v: str) -> str:
+        v_upper = v.upper()
+        if v_upper not in VALID_FINDING_STATUSES:
+            raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_FINDING_STATUSES))}")
+        return v_upper
+
+    @field_validator("severity")
+    def validate_severity(cls, v: str) -> str:
+        v_upper = v.upper()
+        if v_upper not in VALID_FINDING_SEVERITIES:
+            raise ValueError(f"Severity must be one of: {', '.join(sorted(VALID_FINDING_SEVERITIES))}")
+        return v_upper
+
+
+class AISafetyFindingUpdate(BaseModel):
+    status: str
+
+    @field_validator("status")
+    def validate_status(cls, v: str) -> str:
+        v_upper = v.upper()
+        if v_upper not in VALID_FINDING_STATUSES:
+            raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_FINDING_STATUSES))}")
+        return v_upper
+
+
+class AISafetyFindingResponse(AISafetyFindingBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AIAnalysisRunResponse(BaseModel):
+    id: int
+    photo_id: int
+    model_name: str
+    model_version: str
+    status: str
+    processing_time_ms: Optional[float] = None
+    error_message: Optional[str] = None
+    annotated_file_path: Optional[str] = None
+    created_at: datetime
+    detections: List[AIDetectionResponse] = []
+    safety_findings: List[AISafetyFindingResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class AnalysisResultResponse(BaseModel):
+    photo_id: int
+    analysis_run_id: int
+    status: str
+    model_name: str
+    model_version: str
+    processing_time_ms: Optional[float] = None
+    detections: List[AIDetectionResponse] = []
+    safety_findings: List[AISafetyFindingResponse] = []
+    annotated_image_url: Optional[str] = None
+
+
+class AISummaryResponse(BaseModel):
+    project_id: int
+    total_photos: int
+    photos_analyzed: int
+    total_findings: int
+    open_findings: int
+    high_severity: int
+    medium_severity: int
+    low_severity: int
+    resolved_findings: int
+    false_positive_findings: int
+
+
+class BulkAnalysisResponse(BaseModel):
+    project_id: int
+    total: int
+    processed: int
+    successful: int
+    failed: int
+    runs: List[AnalysisResultResponse] = []
+

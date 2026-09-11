@@ -41,4 +41,15 @@ Thumbs.db
 # Uploads
 backend/uploads/photos/*
 !backend/uploads/photos/.gitkeep
+backend/uploads/ai/*
+!backend/uploads/ai/.gitkeep
+
+# AI, Models & Datasets
+*.pt
+*.pth
+*.onnx
+runs/
+datasets/
+backend/ai/weights/*
+!backend/ai/weights/.gitkeep
 

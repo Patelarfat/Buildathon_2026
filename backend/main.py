@@ -19,6 +19,7 @@ from routers import (
     inspections,
     observations,
     materials,
+    ai,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
 os.makedirs(os.path.join(UPLOAD_DIR, "photos"), exist_ok=True)
+os.makedirs(os.path.join(UPLOAD_DIR, "ai"), exist_ok=True)
 
 
 @asynccontextmanager
@@ -41,7 +43,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Construction Site Intelligence API",
     description="Backend API for Construction Site Intelligence Platform - Field Data Collection & Project Management",
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan
 )
 
@@ -58,7 +60,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Serve uploaded static assets (photos)
+# Serve uploaded static assets (photos & AI annotations)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # Include API Routers
@@ -72,6 +74,8 @@ app.include_router(incidents.router)
 app.include_router(inspections.router)
 app.include_router(observations.router)
 app.include_router(materials.router)
+app.include_router(ai.router)
+
 
 
 @app.get("/")
