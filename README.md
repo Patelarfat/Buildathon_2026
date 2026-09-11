@@ -243,6 +243,18 @@ The Next.js frontend will start at `http://localhost:3000`.
 | `PATCH` | `/api/ai-findings/{id}` | Human review action (OPEN -> REVIEWED / RESOLVED / FALSE_POSITIVE) |
 | `POST` | `/api/projects/{id}/ai/analyze-pending` | Bulk queue un-analyzed photos for automated batch inference |
 
+### Construction Intelligence Engine APIs (Phase 5)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/projects/{id}/intelligence` | Consolidated project intelligence (risk score, area rankings, recurring issues, trends, safety, progress, ops risk) |
+| `GET` | `/api/projects/{id}/risk` | Explainable 0-100 safety risk score, level, sub-scores, and reasons |
+| `GET` | `/api/projects/{id}/risk/explanation` | Detailed risk explainability report with human-readable rationale |
+| `GET` | `/api/projects/{id}/risk/areas` | Area safety risk ranking (sorted highest risk first) |
+| `GET` | `/api/projects/{id}/recurring-issues` | Detected recurring issues (>=3 occurrences in time window) |
+| `GET` | `/api/projects/{id}/trends` | Period-over-period trend analysis (safety, PPE, incident, progress) |
+| `GET` | `/api/projects/{id}/safety-summary` | Consolidated safety metrics & PPE violation breakdown |
+| `GET` | `/api/projects/{id}/operational-risk` | Operational risks (material shortages, delivery delays, blockers) |
+
 ---
 
 ## 9. Phase Completion Status
@@ -271,5 +283,15 @@ The Next.js frontend will start at `http://localhost:3000`.
   - Deterministic safety rule engine mapping detected PPE states to severity-graded findings
   - Human-in-the-loop review workflow (`OPEN`, `REVIEWED`, `RESOLVED`, `FALSE_POSITIVE`)
   - Interactive UI with side-by-side / toggled original vs annotated viewer and real-time AI KPI cards
+- [x] **Phase 5: Construction Intelligence Engine**
+  - Transparent, explainable safety risk score (0-100) with strict component caps (AI findings, Incidents, Observations, Inspections, Recurring, Trend)
+  - Explainability engine generating clear, deterministic human-readable reasons for every score
+  - Configurable recurring issue detection ($\ge 3$ occurrences per zone in lookback window)
+  - Period-over-period trend analysis with configurable tolerance thresholds ($\pm 10\%$)
+  - Multi-level hierarchical intelligence (Area ranking $\rightarrow$ Site $\rightarrow$ Project)
+  - Clear separation of concerns: Operational risk (material shortages & daily blockers) isolated from Safety Risk
+  - Data confidence rating (`LOW`, `MEDIUM`, `HIGH`) preventing false sense of security on inactive projects
+  - Full-featured interactive Next.js Intelligence Dashboard at `/projects/[id]/intelligence`
+
 
 

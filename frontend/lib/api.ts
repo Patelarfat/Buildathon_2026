@@ -559,3 +559,227 @@ export const bulkAnalyzePendingPhotos = (projectId: number, limit: number = 20) 
     method: "POST",
   });
 
+
+// ==========================================
+// PHASE 5: CONSTRUCTION INTELLIGENCE ENGINE
+// ==========================================
+
+export interface RiskComponents {
+  ai_findings: number;
+  incidents: number;
+  observations: number;
+  inspections: number;
+  recurring: number;
+  trend: number;
+}
+
+export interface RiskExplanation {
+  project_id: number;
+  site_id?: number | null;
+  area_id?: number | null;
+  time_window_days: number;
+  score: number;
+  level: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  data_confidence: "LOW" | "MEDIUM" | "HIGH";
+  components: RiskComponents;
+  reasons: string[];
+  disclaimer: string;
+}
+
+export interface AreaRiskRankingItem {
+  area_id: number;
+  area_name: string;
+  site_id: number;
+  site_name: string;
+  risk_score: number;
+  risk_level: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  open_issues: number;
+  ai_findings_count: number;
+  incidents_count: number;
+  observations_count: number;
+  trend: "INCREASING" | "DECREASING" | "STABLE";
+  reasons: string[];
+}
+
+export interface RecurringIssue {
+  id?: number;
+  project_id: number;
+  site_id: number;
+  area_id?: number | null;
+  area_name?: string | null;
+  site_name?: string | null;
+  issue_type: string;
+  issue_category: string;
+  occurrence_count: number;
+  first_seen: string;
+  last_seen: string;
+  time_window_days: number;
+  severity: string;
+  status: string;
+  created_at?: string;
+}
+
+export interface DailyTrendItem {
+  date: string;
+  ai_findings: number;
+  incidents: number;
+  observations: number;
+  total_safety: number;
+}
+
+export interface ProjectTrends {
+  project_id: number;
+  time_window_days: number;
+  safety_trend: "INCREASING" | "DECREASING" | "STABLE";
+  safety_change_pct: number;
+  current_safety_count: number;
+  previous_safety_count: number;
+  ppe_trend: string;
+  incident_trend: string;
+  observation_trend: string;
+  progress_trend: string;
+  daily_series: DailyTrendItem[];
+}
+
+export interface PPEBreakdown {
+  no_helmet: number;
+  no_gloves: number;
+  no_boots: number;
+  no_goggles: number;
+  other_violations: number;
+  compliant_detections: number;
+  total_ai_findings: number;
+}
+
+export interface SafetySummary {
+  project_id: number;
+  time_window_days: number;
+  ai_findings_total: number;
+  ai_findings_open: number;
+  human_incidents_total: number;
+  human_incidents_open: number;
+  observations_total: number;
+  observations_open: number;
+  inspections_total: number;
+  inspections_failed: number;
+  inspections_passed: number;
+  inspections_requires_action: number;
+  inspection_failure_rate_pct: number;
+  avg_resolution_time_hours?: number | null;
+  oldest_unresolved_days?: number | null;
+  ppe_breakdown: PPEBreakdown;
+  human_vs_ai_ratio: string;
+}
+
+export interface OperationalRisk {
+  project_id: number;
+  low_stock_materials: Material[];
+  delayed_materials: Material[];
+  open_blockers: string[];
+  progress_concerns: string[];
+  operational_risk_level: "LOW" | "MEDIUM" | "HIGH";
+}
+
+export interface ProgressIntelligence {
+  project_id: number;
+  time_window_days: number;
+  latest_progress_pct?: number | null;
+  average_progress_pct?: number | null;
+  previous_period_progress_pct?: number | null;
+  progress_change_pct?: number | null;
+  progress_trend: "IMPROVING" | "DECLINING" | "STABLE";
+  latest_workers?: number | null;
+  average_workers?: number | null;
+  total_reports: number;
+  blocked_days_count: number;
+}
+
+export interface ProjectIntelligence {
+  project_id: number;
+  time_window_days: number;
+  project_risk: RiskExplanation;
+  highest_risk_site?: string | null;
+  highest_risk_area?: string | null;
+  area_risks: AreaRiskRankingItem[];
+  recurring_issues: RecurringIssue[];
+  trends: ProjectTrends;
+  safety_summary: SafetySummary;
+  progress: ProgressIntelligence;
+  operational_risk: OperationalRisk;
+}
+
+// Construction Intelligence API Client methods
+export const getProjectIntelligence = (projectId: number, days: number = 7) =>
+  request<ProjectIntelligence>(`/api/projects/${projectId}/intelligence?days=${days}`);
+
+export const getProjectRisk = (
+  projectId: number,
+  days: number = 7,
+  filters?: { site_id?: number; area_id?: number }
+) => {
+  const params = new URLSearchParams({ days: String(days) });
+  if (filters?.site_id) params.append("site_id", String(filters.site_id));
+  if (filters?.area_id) params.append("area_id", String(filters.area_id));
+  return request<RiskExplanation>(`/api/projects/${projectId}/risk?${params.toString()}`);
+};
+
+export const getProjectRiskExplanation = (
+  projectId: number,
+  days: number = 7,
+  filters?: { site_id?: number; area_id?: number }
+) => {
+  const params = new URLSearchParams({ days: String(days) });
+  if (filters?.site_id) params.append("site_id", String(filters.site_id));
+  if (filters?.area_id) params.append("area_id", String(filters.area_id));
+  return request<RiskExplanation>(`/api/projects/${projectId}/risk/explanation?${params.toString()}`);
+};
+
+export const getAreaRiskRanking = (projectId: number, days: number = 7) =>
+  request<AreaRiskRankingItem[]>(`/api/projects/${projectId}/risk/areas?days=${days}`);
+
+export const getRecurringIssues = (
+  projectId: number,
+  days: number = 7,
+  filters?: { site_id?: number; area_id?: number; threshold?: number }
+) => {
+  const params = new URLSearchParams({ days: String(days) });
+  if (filters?.site_id) params.append("site_id", String(filters.site_id));
+  if (filters?.area_id) params.append("area_id", String(filters.area_id));
+  if (filters?.threshold) params.append("threshold", String(filters.threshold));
+  return request<RecurringIssue[]>(`/api/projects/${projectId}/recurring-issues?${params.toString()}`);
+};
+
+export const getProjectTrends = (
+  projectId: number,
+  days: number = 7,
+  filters?: { site_id?: number; area_id?: number }
+) => {
+  const params = new URLSearchParams({ days: String(days) });
+  if (filters?.site_id) params.append("site_id", String(filters.site_id));
+  if (filters?.area_id) params.append("area_id", String(filters.area_id));
+  return request<ProjectTrends>(`/api/projects/${projectId}/trends?${params.toString()}`);
+};
+
+export const getSafetySummary = (
+  projectId: number,
+  days: number = 7,
+  filters?: { site_id?: number; area_id?: number }
+) => {
+  const params = new URLSearchParams({ days: String(days) });
+  if (filters?.site_id) params.append("site_id", String(filters.site_id));
+  if (filters?.area_id) params.append("area_id", String(filters.area_id));
+  return request<SafetySummary>(`/api/projects/${projectId}/safety-summary?${params.toString()}`);
+};
+
+export const getOperationalRisk = (
+  projectId: number,
+  days: number = 7,
+  filters?: { site_id?: number; area_id?: number }
+) => {
+  const params = new URLSearchParams({ days: String(days) });
+  if (filters?.site_id) params.append("site_id", String(filters.site_id));
+  if (filters?.area_id) params.append("area_id", String(filters.area_id));
+  return request<OperationalRisk>(`/api/projects/${projectId}/operational-risk?${params.toString()}`);
+};
+
+

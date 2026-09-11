@@ -252,6 +252,58 @@
 
 ---
 
+## Schema & Tables (Phase 5 Construction Intelligence Entities)
+
+### 15. `risk_assessments` Table
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | PRIMARY KEY, AUTO_INCREMENT | Unique identifier for assessment run |
+| `project_id` | `INTEGER` | FOREIGN KEY (projects.id ON DELETE CASCADE), NOT NULL | Evaluated project ID |
+| `site_id` | `INTEGER` | FOREIGN KEY (sites.id ON DELETE CASCADE), NULLABLE | Optional site filter |
+| `area_id` | `INTEGER` | FOREIGN KEY (areas.id ON DELETE SET NULL), NULLABLE | Optional area filter |
+| `assessment_date` | `VARCHAR(50)` | NOT NULL | Date stamp of assessment (YYYY-MM-DD) |
+| `time_window_days` | `INTEGER` | NOT NULL, DEFAULT 7 | Evaluated lookback window (1, 7, 30 days) |
+| `risk_score` | `INTEGER` | NOT NULL | Clamped 0-100 score |
+| `risk_level` | `VARCHAR(50)` | NOT NULL | LOW (0-24), MEDIUM (25-49), HIGH (50-74), CRITICAL (75-100) |
+| `ai_findings_score` | `FLOAT` | NOT NULL, DEFAULT 0.0 | Capped AI sub-score (max 30) |
+| `incident_score` | `FLOAT` | NOT NULL, DEFAULT 0.0 | Capped human incident sub-score (max 30) |
+| `observation_score` | `FLOAT` | NOT NULL, DEFAULT 0.0 | Capped observation sub-score (max 15) |
+| `inspection_score` | `FLOAT` | NOT NULL, DEFAULT 0.0 | Capped inspection sub-score (max 15) |
+| `recurring_issue_score` | `FLOAT` | NOT NULL, DEFAULT 0.0 | Capped recurring issue sub-score (max 15) |
+| `trend_score` | `FLOAT` | NOT NULL, DEFAULT 0.0 | Trend adjustment (+10, 0, -5) |
+| `data_confidence` | `VARCHAR(50)` | NOT NULL, DEFAULT 'HIGH' | Record volume reliability (LOW, MEDIUM, HIGH) |
+| `calculated_at` | `TIMESTAMP` | NOT NULL, AUTO | Calculation timestamp |
+
+### 16. `risk_reasons` Table
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | PRIMARY KEY, AUTO_INCREMENT | Unique identifier for explanation reason |
+| `risk_assessment_id` | `INTEGER` | FOREIGN KEY (risk_assessments.id ON DELETE CASCADE), NOT NULL | Parent assessment |
+| `reason_type` | `VARCHAR(100)` | NOT NULL | SAFETY_INDICATOR, RECURRING, TREND, GENERAL |
+| `message` | `TEXT` | NOT NULL | Specific plain-text explanatory reason |
+| `impact_points` | `FLOAT` | NOT NULL, DEFAULT 0.0 | Point contribution |
+| `created_at` | `TIMESTAMP` | NOT NULL, AUTO | Creation timestamp |
+
+### 17. `recurring_issues` Table
+| Column | Type | Constraints | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `INTEGER` | PRIMARY KEY, AUTO_INCREMENT | Unique identifier for recurring issue alert |
+| `project_id` | `INTEGER` | FOREIGN KEY (projects.id ON DELETE CASCADE), NOT NULL | Project ID |
+| `site_id` | `INTEGER` | FOREIGN KEY (sites.id ON DELETE CASCADE), NOT NULL | Site ID |
+| `area_id` | `INTEGER` | FOREIGN KEY (areas.id ON DELETE SET NULL), NULLABLE | Area ID |
+| `issue_type` | `VARCHAR(100)` | NOT NULL | Specific issue code (e.g. NO_HELMET, PPE_VIOLATION) |
+| `issue_category` | `VARCHAR(100)` | NOT NULL | AI_PPE, SAFETY_INCIDENT, OBSERVATION, INSPECTION, MATERIAL |
+| `occurrence_count` | `INTEGER` | NOT NULL, DEFAULT 1 | Count of occurrences in window |
+| `first_seen` | `VARCHAR(50)` | NOT NULL | First occurrence date/timestamp |
+| `last_seen` | `VARCHAR(50)` | NOT NULL | Most recent occurrence date/timestamp |
+| `time_window_days` | `INTEGER` | NOT NULL, DEFAULT 7 | Evaluation window |
+| `severity` | `VARCHAR(50)` | NOT NULL | LOW, MEDIUM, HIGH, CRITICAL |
+| `status` | `VARCHAR(50)` | NOT NULL, DEFAULT 'ACTIVE' | ACTIVE, RESOLVED, ACKNOWLEDGED |
+| `created_at` | `TIMESTAMP` | NOT NULL, AUTO | Creation timestamp |
+| `updated_at` | `TIMESTAMP` | NOT NULL, AUTO | Update timestamp |
+
+---
+
 ## Verification Queries
 
 To verify database connection and schema:
@@ -272,5 +324,9 @@ To verify database connection and schema:
 \d ai_analysis_runs
 \d ai_detections
 \d ai_safety_findings
+\d risk_assessments
+\d risk_reasons
+\d recurring_issues
 ```
+
 

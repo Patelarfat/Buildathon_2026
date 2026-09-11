@@ -378,6 +378,54 @@ export default function ProjectDetailPage({
         </div>
       </div>
 
+      {/* Phase 5: Construction Intelligence Engine Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 border border-cyan-500/30 rounded-2xl p-6 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-cyan-950">
+          <div>
+            <h3 className="text-base font-bold text-white flex items-center space-x-2">
+              <span>🧠 Construction Intelligence Engine (Phase 5)</span>
+              <span className="text-[10px] font-mono bg-cyan-900/60 text-cyan-300 border border-cyan-700/60 px-2 py-0.5 rounded font-bold">
+                LIVE RISK & TRENDS
+              </span>
+            </h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Explainable safety risk scores, area rankings, recurring issue detection, and operational risk summaries
+            </p>
+          </div>
+          <Link
+            href={`/projects/${projectId}/intelligence`}
+            className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-cyan-950 flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <span>Open Intelligence Dashboard</span>
+            <span>→</span>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
+            <span className="text-2xl">📊</span>
+            <div>
+              <div className="text-[11px] text-slate-400">Explainable Safety Risk</div>
+              <div className="text-sm font-bold text-white mt-0.5">Capped Multi-Factor Scoring</div>
+            </div>
+          </div>
+          <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
+            <span className="text-2xl">⚠</span>
+            <div>
+              <div className="text-[11px] text-slate-400">Recurring Problem Alert</div>
+              <div className="text-sm font-bold text-white mt-0.5">≥3 Incidents per Zone Filter</div>
+            </div>
+          </div>
+          <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
+            <span className="text-2xl">📍</span>
+            <div>
+              <div className="text-[11px] text-slate-400">Area Hierarchy Ranking</div>
+              <div className="text-sm font-bold text-white mt-0.5">Dynamic Risk Ranking by Area</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* AI PPE Safety Intelligence Summary (Phase 4) */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-indigo-900/50 rounded-2xl p-6 shadow-xl space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-indigo-950">

@@ -20,6 +20,7 @@ from routers import (
     observations,
     materials,
     ai,
+    intelligence,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -43,7 +44,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Construction Site Intelligence API",
     description="Backend API for Construction Site Intelligence Platform - Field Data Collection & Project Management",
-    version="0.4.0",
+    version="0.5.0",
     lifespan=lifespan
 )
 
@@ -75,6 +76,7 @@ app.include_router(inspections.router)
 app.include_router(observations.router)
 app.include_router(materials.router)
 app.include_router(ai.router)
+app.include_router(intelligence.router)
 
 
 

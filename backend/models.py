@@ -393,4 +393,70 @@ class AISafetyFinding(Base):
     site = relationship("Site")
     area = relationship("Area")
 
+
+# ==========================================
+# PHASE 5: CONSTRUCTION INTELLIGENCE MODELS
+# ==========================================
+
+class RiskAssessment(Base):
+    __tablename__ = "risk_assessments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    site_id = Column(Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=True, index=True)
+    area_id = Column(Integer, ForeignKey("areas.id", ondelete="SET NULL"), nullable=True, index=True)
+    assessment_date = Column(String(50), nullable=False)
+    time_window_days = Column(Integer, nullable=False, default=7)
+    risk_score = Column(Integer, nullable=False)
+    risk_level = Column(String(50), nullable=False)  # LOW, MEDIUM, HIGH, CRITICAL
+    ai_findings_score = Column(Float, nullable=False, default=0.0)
+    incident_score = Column(Float, nullable=False, default=0.0)
+    observation_score = Column(Float, nullable=False, default=0.0)
+    inspection_score = Column(Float, nullable=False, default=0.0)
+    recurring_issue_score = Column(Float, nullable=False, default=0.0)
+    trend_score = Column(Float, nullable=False, default=0.0)
+    data_confidence = Column(String(50), nullable=False, default="HIGH")  # LOW, MEDIUM, HIGH
+    calculated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    project = relationship("Project")
+    site = relationship("Site")
+    area = relationship("Area")
+    reasons = relationship("RiskReason", back_populates="risk_assessment", cascade="all, delete-orphan")
+
+
+class RiskReason(Base):
+    __tablename__ = "risk_reasons"
+
+    id = Column(Integer, primary_key=True, index=True)
+    risk_assessment_id = Column(Integer, ForeignKey("risk_assessments.id", ondelete="CASCADE"), nullable=False, index=True)
+    reason_type = Column(String(100), nullable=False)  # AI_FINDINGS, INCIDENTS, OBSERVATIONS, INSPECTIONS, RECURRING, TREND, GENERAL
+    message = Column(Text, nullable=False)
+    impact_points = Column(Float, nullable=False, default=0.0)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    risk_assessment = relationship("RiskAssessment", back_populates="reasons")
+
+
+class RecurringIssue(Base):
+    __tablename__ = "recurring_issues"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    site_id = Column(Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=False, index=True)
+    area_id = Column(Integer, ForeignKey("areas.id", ondelete="SET NULL"), nullable=True, index=True)
+    issue_type = Column(String(100), nullable=False)  # e.g., NO_HELMET, PPE_VIOLATION, UNSAFE_CONDITION, FAILED_INSPECTION
+    issue_category = Column(String(100), nullable=False)  # AI_PPE, SAFETY_INCIDENT, OBSERVATION, INSPECTION, MATERIAL
+    occurrence_count = Column(Integer, nullable=False, default=1)
+    first_seen = Column(String(50), nullable=False)
+    last_seen = Column(String(50), nullable=False)
+    time_window_days = Column(Integer, nullable=False, default=7)
+    severity = Column(String(50), nullable=False, default="MEDIUM")  # LOW, MEDIUM, HIGH, CRITICAL
+    status = Column(String(50), nullable=False, default="ACTIVE")  # ACTIVE, RESOLVED, ACKNOWLEDGED
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    project = relationship("Project")
+    site = relationship("Site")
+    area = relationship("Area")
+
 

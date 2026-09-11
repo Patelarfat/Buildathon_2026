@@ -791,3 +791,173 @@ class BulkAnalysisResponse(BaseModel):
     failed: int
     runs: List[AnalysisResultResponse] = []
 
+
+# ==========================================
+# PHASE 5: CONSTRUCTION INTELLIGENCE SCHEMAS
+# ==========================================
+
+class RiskComponents(BaseModel):
+    ai_findings: float
+    incidents: float
+    observations: float
+    inspections: float
+    recurring: float
+    trend: float
+
+
+class RiskExplanationResponse(BaseModel):
+    project_id: int
+    site_id: Optional[int] = None
+    area_id: Optional[int] = None
+    time_window_days: int
+    score: int
+    level: str  # LOW, MEDIUM, HIGH, CRITICAL
+    data_confidence: str  # LOW, MEDIUM, HIGH
+    components: RiskComponents
+    reasons: List[str]
+    disclaimer: str = "This risk score is an explainable project-management indicator based on current safety records, not a statistical probability of an accident."
+
+
+class RiskAssessmentResponse(BaseModel):
+    id: Optional[int] = None
+    project_id: int
+    site_id: Optional[int] = None
+    area_id: Optional[int] = None
+    assessment_date: str
+    time_window_days: int
+    risk_score: int
+    risk_level: str
+    data_confidence: str
+    components: RiskComponents
+    reasons: List[str]
+    calculated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AreaRiskRankingItem(BaseModel):
+    area_id: int
+    area_name: str
+    site_id: int
+    site_name: str
+    risk_score: int
+    risk_level: str
+    open_issues: int
+    ai_findings_count: int
+    incidents_count: int
+    observations_count: int
+    trend: str  # INCREASING, DECREASING, STABLE
+    reasons: List[str] = []
+
+
+class RecurringIssueResponse(BaseModel):
+    id: Optional[int] = None
+    project_id: int
+    site_id: int
+    area_id: Optional[int] = None
+    area_name: Optional[str] = None
+    site_name: Optional[str] = None
+    issue_type: str
+    issue_category: str
+    occurrence_count: int
+    first_seen: str
+    last_seen: str
+    time_window_days: int
+    severity: str
+    status: str
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class DailyTrendItem(BaseModel):
+    date: str
+    ai_findings: int = 0
+    incidents: int = 0
+    observations: int = 0
+    total_safety: int = 0
+
+
+class ProjectTrendsResponse(BaseModel):
+    project_id: int
+    time_window_days: int
+    safety_trend: str  # INCREASING, DECREASING, STABLE
+    safety_change_pct: float
+    current_safety_count: int
+    previous_safety_count: int
+    ppe_trend: str
+    incident_trend: str
+    observation_trend: str
+    progress_trend: str
+    daily_series: List[DailyTrendItem] = []
+
+
+class PPEBreakdown(BaseModel):
+    no_helmet: int = 0
+    no_gloves: int = 0
+    no_boots: int = 0
+    no_goggles: int = 0
+    other_violations: int = 0
+    compliant_detections: int = 0
+    total_ai_findings: int = 0
+
+
+class SafetySummaryResponse(BaseModel):
+    project_id: int
+    time_window_days: int
+    ai_findings_total: int
+    ai_findings_open: int
+    human_incidents_total: int
+    human_incidents_open: int
+    observations_total: int
+    observations_open: int
+    inspections_total: int
+    inspections_failed: int
+    inspections_passed: int
+    inspections_requires_action: int
+    inspection_failure_rate_pct: float
+    avg_resolution_time_hours: Optional[float] = None
+    oldest_unresolved_days: Optional[int] = None
+    ppe_breakdown: PPEBreakdown
+    human_vs_ai_ratio: str
+
+
+class OperationalRiskResponse(BaseModel):
+    project_id: int
+    low_stock_materials: List[MaterialResponse] = []
+    delayed_materials: List[MaterialResponse] = []
+    open_blockers: List[str] = []
+    progress_concerns: List[str] = []
+    operational_risk_level: str  # LOW, MEDIUM, HIGH
+
+
+class ProgressIntelligenceResponse(BaseModel):
+    project_id: int
+    time_window_days: int
+    latest_progress_pct: Optional[int] = None
+    average_progress_pct: Optional[float] = None
+    previous_period_progress_pct: Optional[float] = None
+    progress_change_pct: Optional[float] = None
+    progress_trend: str  # IMPROVING, DECLINING, STABLE
+    latest_workers: Optional[int] = None
+    average_workers: Optional[float] = None
+    total_reports: int = 0
+    blocked_days_count: int = 0
+
+
+class ProjectIntelligenceResponse(BaseModel):
+    project_id: int
+    time_window_days: int
+    project_risk: RiskExplanationResponse
+    highest_risk_site: Optional[str] = None
+    highest_risk_area: Optional[str] = None
+    area_risks: List[AreaRiskRankingItem] = []
+    recurring_issues: List[RecurringIssueResponse] = []
+    trends: ProjectTrendsResponse
+    safety_summary: SafetySummaryResponse
+    progress: ProgressIntelligenceResponse
+    operational_risk: OperationalRiskResponse
+
+

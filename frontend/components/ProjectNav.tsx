@@ -12,6 +12,7 @@ export default function ProjectNav({ projectId }: ProjectNavProps) {
 
   const tabs = [
     { label: "Overview & Structure", href: `/projects/${projectId}`, icon: "🏗️" },
+    { label: "Intelligence Engine", href: `/projects/${projectId}/intelligence`, icon: "🧠" },
     { label: "Site Photos", href: `/projects/${projectId}/photos`, icon: "📸" },
     { label: "Daily Reports", href: `/projects/${projectId}/daily-reports`, icon: "📋" },
     { label: "Safety Incidents", href: `/projects/${projectId}/incidents`, icon: "⚠️" },
