@@ -22,6 +22,7 @@ from routers import (
     ai,
     intelligence,
     dashboard,
+    assistant,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -79,6 +80,7 @@ app.include_router(materials.router)
 app.include_router(ai.router)
 app.include_router(intelligence.router)
 app.include_router(dashboard.router)
+app.include_router(assistant.router)
 
 
 

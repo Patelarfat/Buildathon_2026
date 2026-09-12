@@ -1019,4 +1019,23 @@ class ManagerDashboardResponse(BaseModel):
     recent_activity: List[ActivityItemResponse] = []
 
 
+# ==========================================
+# PHASE 7: GENAI PROJECT ASSISTANT SCHEMAS
+# ==========================================
 
+class AssistantSource(BaseModel):
+    type: str
+    id: str
+    title: str
+    detail: Optional[str] = None
+
+
+class AssistantChatRequest(BaseModel):
+    message: str = Field(..., max_length=2000, description="Project management natural language query")
+
+
+class AssistantChatResponse(BaseModel):
+    project_id: int
+    answer: str
+    sources: List[AssistantSource] = []
+    data_used: List[str] = []

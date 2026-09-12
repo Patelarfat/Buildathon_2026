@@ -879,5 +879,23 @@ export const getProjectDashboard = (
   return request<ManagerDashboardData>(`/api/projects/${projectId}/dashboard${query}`);
 };
 
+// --- Phase 7: GenAI Project Assistant API ---
+export interface AssistantSource {
+  type: string;
+  id: string;
+  title: string;
+  detail?: string;
+}
 
+export interface AssistantChatResponse {
+  project_id: number;
+  answer: string;
+  sources: AssistantSource[];
+  data_used: string[];
+}
 
+export const chatWithAssistant = (projectId: number, message: string) =>
+  request<AssistantChatResponse>(`/api/projects/${projectId}/assistant/chat`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
