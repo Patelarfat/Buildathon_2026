@@ -5,11 +5,15 @@ import Link from "next/link";
 import {
   SitePhoto,
   ProjectDetail,
+  Site,
+  Area,
   User,
   AnalysisResult,
   AISafetyFinding,
   FindingStatus,
   getProject,
+  getSitesForProject,
+  getAreasForSite,
   getProjectPhotos,
   uploadPhoto,
   deletePhoto,
@@ -51,6 +55,14 @@ export default function ProjectPhotosPage({
   const [uploading, setUploading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Dynamic Sites and Areas State for Modal
+  const [sites, setSites] = useState<Site[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [loadingSites, setLoadingSites] = useState(false);
+  const [loadingAreas, setLoadingAreas] = useState(false);
+  const [sitesError, setSitesError] = useState<string | null>(null);
+  const [areasError, setAreasError] = useState<string | null>(null);
+
   // AI Analysis State
   const [analyzingPhotoId, setAnalyzingPhotoId] = useState<number | null>(null);
   const [activeAnalysis, setActiveAnalysis] = useState<AnalysisResult | null>(null);
@@ -61,22 +73,110 @@ export default function ProjectPhotosPage({
   const [bulkAnalyzing, setBulkAnalyzing] = useState(false);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
 
+  const loadSites = async (projId: number) => {
+    if (!projId || isNaN(projId)) return;
+    setLoadingSites(true);
+    setSitesError(null);
+    try {
+      const siteList = await getSitesForProject(projId);
+      setSites(siteList);
+      if (siteList.length > 0) {
+        let siteToSelect = siteList[0].id;
+        if (selectedSiteId !== "" && siteList.some((s) => s.id === Number(selectedSiteId))) {
+          siteToSelect = Number(selectedSiteId);
+        }
+        setSelectedSiteId(siteToSelect);
+        await loadAreas(siteToSelect);
+      } else {
+        setSelectedSiteId("");
+        setAreas([]);
+        setSelectedAreaId("");
+      }
+    } catch (err: any) {
+      setSitesError("Failed to load construction sites. Please try again.");
+      setSites([]);
+      setSelectedSiteId("");
+      setAreas([]);
+      setSelectedAreaId("");
+    } finally {
+      setLoadingSites(false);
+    }
+  };
+
+  const loadAreas = async (siteId: number) => {
+    if (!siteId || isNaN(siteId)) {
+      setAreas([]);
+      setSelectedAreaId("");
+      return;
+    }
+    setLoadingAreas(true);
+    setAreasError(null);
+    try {
+      const areaList = await getAreasForSite(siteId);
+      setAreas(areaList);
+      if (selectedAreaId !== "" && !areaList.some((a) => a.id === Number(selectedAreaId))) {
+        setSelectedAreaId("");
+      }
+    } catch (err: any) {
+      setAreasError("Failed to load areas for this site. Please try again.");
+      setAreas([]);
+      setSelectedAreaId("");
+    } finally {
+      setLoadingAreas(false);
+    }
+  };
+
+  const handleSiteChange = async (siteValue: string) => {
+    if (!siteValue) {
+      setSelectedSiteId("");
+      setSelectedAreaId("");
+      setAreas([]);
+      setAreasError(null);
+      return;
+    }
+    const siteId = Number(siteValue);
+    setSelectedSiteId(siteId);
+    setSelectedAreaId("");
+    setAreas([]);
+    await loadAreas(siteId);
+  };
+
+  const handleOpenUploadModal = () => {
+    setFormError(null);
+    setSitesError(null);
+    setAreasError(null);
+    setShowUploadModal(true);
+    if (projectId) {
+      loadSites(projectId);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [projData, photosData, usersData] = await Promise.all([
+      const [projData, photosData, usersData, siteList] = await Promise.all([
         getProject(projectId),
         getProjectPhotos(projectId),
         getUsers(),
+        getSitesForProject(projectId),
       ]);
       setProject(projData);
       setPhotos(photosData);
       setUsers(usersData);
+      setSites(siteList);
 
-      if (projData.sites.length > 0 && selectedSiteId === "") {
-        setSelectedSiteId(projData.sites[0].id);
+      if (siteList.length > 0) {
+        const initialSiteId = siteList[0].id;
+        setSelectedSiteId(initialSiteId);
+        const areaList = await getAreasForSite(initialSiteId).catch(() => []);
+        setAreas(areaList);
+      } else {
+        setSelectedSiteId("");
+        setAreas([]);
+        setSelectedAreaId("");
       }
+
       if (usersData.length > 0 && selectedUploaderId === "") {
         setSelectedUploaderId(usersData[0].id);
       }
@@ -89,6 +189,12 @@ export default function ProjectPhotosPage({
 
   useEffect(() => {
     if (projectId) {
+      setSelectedSiteId("");
+      setSelectedAreaId("");
+      setSites([]);
+      setAreas([]);
+      setSitesError(null);
+      setAreasError(null);
       loadData();
     }
   }, [projectId]);
@@ -228,8 +334,6 @@ export default function ProjectPhotosPage({
     }
   };
 
-  const currentSite = project?.sites.find((s) => s.id === Number(selectedSiteId));
-
   const severityBadge = (sev: string) => {
     switch (sev.toUpperCase()) {
       case "HIGH":
@@ -299,7 +403,7 @@ export default function ProjectPhotosPage({
             <span>{bulkAnalyzing ? "Analyzing Batch..." : "Bulk Analyze Pending"}</span>
           </button>
           <button
-            onClick={() => setShowUploadModal(true)}
+            onClick={handleOpenUploadModal}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/30 flex items-center space-x-1.5"
           >
             <span>+</span>
@@ -353,20 +457,42 @@ export default function ProjectPhotosPage({
                   </label>
                   <select
                     value={selectedSiteId}
-                    onChange={(e) => {
-                      setSelectedSiteId(Number(e.target.value));
-                      setSelectedAreaId("");
-                    }}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    onChange={(e) => handleSiteChange(e.target.value)}
+                    disabled={loadingSites || sites.length === 0}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
                     required
                   >
-                    <option value="">Select Site</option>
-                    {project?.sites.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
+                    {loadingSites ? (
+                      <option value="">Loading sites...</option>
+                    ) : sites.length === 0 ? (
+                      <option value="">No construction sites found</option>
+                    ) : (
+                      <>
+                        <option value="">Select Site</option>
+                        {sites.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
+                  {sitesError && (
+                    <p className="text-[11px] text-rose-400 mt-1">{sitesError}</p>
+                  )}
+                  {!loadingSites && sites.length === 0 && !sitesError && (
+                    <div className="mt-1.5 flex items-center justify-between">
+                      <p className="text-[11px] text-amber-400">
+                        No construction sites found for this project. Create a site first.
+                      </p>
+                      <Link
+                        href={`/projects/${projectId}`}
+                        className="text-[11px] font-semibold text-blue-400 hover:text-blue-300 underline ml-2 shrink-0"
+                      >
+                        + Create Site
+                      </Link>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -376,15 +502,34 @@ export default function ProjectPhotosPage({
                   <select
                     value={selectedAreaId}
                     onChange={(e) => setSelectedAreaId(e.target.value ? Number(e.target.value) : "")}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    disabled={!selectedSiteId || loadingAreas}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 disabled:opacity-50"
                   >
-                    <option value="">No Specific Area</option>
-                    {currentSite?.areas.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} ({a.area_type || "Zone"})
-                      </option>
-                    ))}
+                    {loadingAreas ? (
+                      <option value="">Loading areas...</option>
+                    ) : !selectedSiteId ? (
+                      <option value="">No Specific Area</option>
+                    ) : areas.length === 0 ? (
+                      <option value="">No areas available for this site</option>
+                    ) : (
+                      <>
+                        <option value="">No Specific Area</option>
+                        {areas.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name} {a.area_type ? `(${a.area_type})` : ""}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
+                  {areasError && (
+                    <p className="text-[11px] text-rose-400 mt-1">{areasError}</p>
+                  )}
+                  {!loadingAreas && selectedSiteId && areas.length === 0 && !areasError && (
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      No areas available for this site.
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -729,7 +874,7 @@ export default function ProjectPhotosPage({
             Upload field photos with timestamps, location, and area tags for AI inspection and audit.
           </p>
           <button
-            onClick={() => setShowUploadModal(true)}
+            onClick={handleOpenUploadModal}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg"
           >
             Upload First Photo
