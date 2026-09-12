@@ -1,156 +1,223 @@
 # Construction Site Intelligence Platform
 
-A modern, full-stack intelligence platform for construction sites designed to manage projects, job sites, work zones, personnel, and monitor safety operations.
+A modern, full-stack AI-powered intelligence platform for construction sites designed to manage projects, job sites, work zones, personnel, field data collection, computer vision PPE safety detection, and executive decision intelligence.
 
 ---
 
-## 1. Technology Stack
+## 1. Quickstart — Clone & Run (For Collaborators & Teammates)
 
-- **Frontend:** Next.js (App Router), TypeScript, Tailwind CSS, React
-- **Backend:** FastAPI, Uvicorn, Python 3.10+
-- **Database:** PostgreSQL
-- **ORM:** SQLAlchemy, psycopg2-binary
-- **Configuration & Security:** python-dotenv (environment variables)
+Follow these simple steps to get the entire project running on your local machine.
+
+### Prerequisites
+Make sure you have the following installed:
+- **Git** ([Download Git](https://git-scm.com/))
+- **Python 3.10, 3.11, or 3.12** ([Download Python](https://www.python.org/))
+- **Node.js 18+ & npm** ([Download Node.js](https://nodejs.org/))
+- **PostgreSQL 14+** ([Download PostgreSQL](https://www.postgresql.org/download/))
 
 ---
 
-## 2. Project Structure
-
-```
-Buldathon_ps1_2026/
-│
-├── frontend/
-│   ├── app/
-│   │   ├── favicon.ico
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   ├── page.tsx          # Home page & health check
-│   │   └── projects/
-│   │       ├── page.tsx      # Projects list & filter
-│   │       ├── new/
-│   │       │   └── page.tsx  # Create project page
-│   │       └── [id]/
-│   │           └── page.tsx  # Project details (sites, areas, members)
-│   ├── components/
-│   │   ├── Navbar.tsx
-│   │   ├── ProjectCard.tsx
-│   │   ├── SiteList.tsx
-│   │   ├── AreaList.tsx
-│   │   └── MemberList.tsx
-│   ├── lib/
-│   │   └── api.ts            # Typed API client
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── ...
-│
-├── backend/
-│   ├── venv/                 # LOCAL ONLY, NEVER COMMITTED
-│   ├── main.py               # FastAPI entrypoint & health checks
-│   ├── database.py           # SQLAlchemy engine & session setup
-│   ├── models.py             # SQLAlchemy models (User, Project, Site, Area, Member)
-│   ├── schemas.py            # Pydantic validation schemas
-│   ├── routers/
-│   │   ├── projects.py       # Project, sub-site & sub-member APIs
-│   │   ├── sites.py          # Site & sub-area APIs
-│   │   ├── areas.py          # Area APIs
-│   │   └── users.py          # User management APIs
-│   ├── requirements.txt      # Python dependencies
-│   └── .env                  # LOCAL ONLY, NEVER COMMITTED
-│
-├── database/
-│   └── README.md             # Database schema and setup guide
-│
-├── .gitignore
-└── README.md
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/Patelarfat/Buildathon_2026.git
+cd Buildathon_2026
 ```
 
 ---
 
-## 3. PostgreSQL Setup
-
-1. Make sure PostgreSQL is running locally on port `5432`.
-2. Connect to PostgreSQL:
+### Step 2: Set Up PostgreSQL Database
+1. Ensure PostgreSQL service is running locally on default port `5432`.
+2. Connect to PostgreSQL using your preferred tool (`psql` CLI or pgAdmin):
    ```bash
    psql -U postgres
    ```
 3. Create the database:
    ```sql
    CREATE DATABASE construction_intelligence;
+   \q
    ```
 
 ---
 
-## 4. Environment Variables
+### Step 3: Set Up & Start Backend
 
-Create a file named `.env` inside the `backend/` directory with your PostgreSQL connection string:
-
-```env
-DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/construction_intelligence
-```
-
-> **Security Note:** `.env` and `venv/` are listed in `.gitignore` and must never be committed to Git.
-
----
-
-## 5. Backend Setup
-
-1. Open a terminal and navigate to the backend directory:
-   ```powershell
+1. Navigate to the backend directory:
+   ```bash
    cd backend
    ```
 
-2. Create a virtual environment (if not already created):
-   ```powershell
-   python -m venv venv
-   ```
-
-3. Activate the virtual environment:
-   - On Windows PowerShell:
+2. Create a virtual environment:
+   - On Windows (PowerShell):
      ```powershell
+     python -m venv venv
      .\venv\Scripts\activate
      ```
-   - On Linux / macOS:
+   - On macOS / Linux:
      ```bash
+     python3 -m venv venv
      source venv/bin/activate
      ```
 
-4. Install dependencies:
-   ```powershell
+3. Configure Environment Variables:
+   - Copy `.env.example` to `.env`:
+     - On Windows (PowerShell): `Copy-Item .env.example .env`
+     - On macOS / Linux: `cp .env.example .env`
+   - Edit `.env` and set your PostgreSQL password:
+     ```env
+     DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/construction_intelligence
+     ```
+
+4. Install Python Dependencies:
+   ```bash
+   pip install --upgrade pip
    pip install -r requirements.txt
    ```
 
+5. Start the FastAPI Backend:
+   ```bash
+   uvicorn main:app --reload --port 8000
+   ```
+   * The backend API server will be available at: `http://127.0.0.1:8000`
+   * Interactive Swagger documentation: `http://127.0.0.1:8000/docs`
+
 ---
 
-## 6. Frontend Setup
+### Step 4: Set Up & Start Frontend
 
-1. Open a separate terminal and navigate to the frontend directory:
-   ```powershell
+1. Open a **new terminal** and navigate to the `frontend/` directory:
+   ```bash
    cd frontend
    ```
 
-2. Install dependencies:
-   ```powershell
+2. Configure Environment Variables:
+   - Copy `.env.example` to `.env.local`:
+     - On Windows (PowerShell): `Copy-Item .env.example .env.local`
+     - On macOS / Linux: `cp .env.example .env.local`
+   - Content of `.env.local`:
+     ```env
+     NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+     ```
+
+3. Install Node Dependencies:
+   ```bash
    npm install
+   ```
+
+4. Start the Next.js Development Server:
+   ```bash
+   npm run dev
+   ```
+   * The frontend application will be available at: `http://localhost:3000`
+
+---
+
+### Step 5: Running Tests & Verifications
+
+To verify that the system is functioning properly:
+
+1. **Full Audit Verification Suite (Phases 1–6):**
+   ```bash
+   cd backend
+   python test_full_audit_suite.py
+   ```
+2. **Phase 6 Manager Decision Center Suite:**
+   ```bash
+   cd backend
+   python test_phase6_suite.py
+   ```
+3. **Phase 5 Intelligence Engine Suite:**
+   ```bash
+   cd backend
+   python test_phase5_suite.py
+   ```
+4. **Phase 4 Computer Vision Suite:**
+   ```bash
+   cd backend
+   python test_phase4_suite.py
+   ```
+5. **Phase 3 Field Operations Suite:**
+   ```bash
+   cd backend
+   python test_phase3_suite.py
+   ```
+6. **Frontend Production Build Check:**
+   ```bash
+   cd frontend
+   npm run build
    ```
 
 ---
 
-## 7. How to Run the Project
+## 2. Technology Stack
 
-### Running the Backend Server
-```powershell
-cd backend
-.\venv\Scripts\activate
-uvicorn main:app --reload
-```
-The backend API server will start at `http://127.0.0.1:8000`.
+- **Frontend:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, Lucide Icons, React 18+
+- **Backend:** FastAPI, Uvicorn, Python 3.10+
+- **Database:** PostgreSQL 14+, SQLAlchemy 2.0 ORM, psycopg2-binary
+- **AI / Computer Vision:** Ultralytics YOLO11n fine-tuned on Construction PPE dataset, PyTorch, OpenCV, Pillow
+- **Configuration & Security:** python-dotenv (environment variables)
 
-### Running the Frontend Server
-```powershell
-cd frontend
-npm run dev
+---
+
+## 3. Project Structure
+
 ```
-The Next.js frontend will start at `http://localhost:3000`.
+Buildathon_2026/
+│
+├── frontend/                 # Next.js Frontend Application
+│   ├── app/
+│   │   ├── layout.tsx        # App shell & navigation
+│   │   ├── page.tsx          # Home page & API health status
+│   │   └── projects/
+│   │       ├── page.tsx      # Projects list & creation modal
+│   │       └── [id]/
+│   │           ├── page.tsx          # Project Overview (sites, areas, members)
+│   │           ├── dashboard/        # Manager Decision Center (Phase 6)
+│   │           ├── intelligence/     # Intelligence Engine Dashboard (Phase 5)
+│   │           ├── photos/           # AI Photo & PPE Analysis (Phase 4)
+│   │           ├── daily-reports/    # Field Daily Reports (Phase 3)
+│   │           ├── incidents/        # Safety Incidents & Near-Misses (Phase 3)
+│   │           ├── inspections/      # Inspection Reports & Checklists (Phase 3)
+│   │           ├── observations/     # Site Observations & Hazards (Phase 3)
+│   │           └── materials/        # Material Deliveries & Consumption (Phase 3)
+│   ├── components/           # Reusable UI widgets & navigation
+│   ├── lib/                  # API client and TypeScript type definitions
+│   ├── package.json
+│   └── .env.example
+│
+├── backend/                  # FastAPI Backend API Server
+│   ├── main.py               # FastAPI entrypoint, CORS, routers & health check
+│   ├── database.py           # SQLAlchemy engine & session manager
+│   ├── models.py             # Database models across Phases 1–6
+│   ├── schemas.py            # Pydantic request & response validation schemas
+│   ├── routers/              # RESTful API route controllers
+│   │   ├── projects.py       # Projects, sub-sites, sub-members
+│   │   ├── sites.py          # Sites & areas
+│   │   ├── areas.py          # Area details
+│   │   ├── users.py          # User management
+│   │   ├── photos.py         # Photo uploads, file storage & AI inspection
+│   │   ├── daily_reports.py  # Daily logs
+│   │   ├── incidents.py      # Safety incidents
+│   │   ├── inspections.py    # Inspections
+│   │   ├── observations.py   # Observations
+│   │   ├── materials.py      # Materials
+│   │   ├── ai_findings.py    # AI finding management & human reviews
+│   │   ├── intelligence.py   # Intelligence Engine & risk scoring
+│   │   └── dashboard.py      # Manager Decision Center unified dashboard
+│   ├── services/             # Core business logic services
+│   │   ├── ppe/              # YOLO inference, safety rule engine, bounding boxes
+│   │   └── intelligence/     # RiskEngine, recurring issue detector, trend analysis
+│   ├── ai/                   # AI weights, model metadata & benchmark scripts
+│   │   ├── weights/best.pt   # Production YOLO11n fine-tuned weights
+│   │   └── model_metadata.json
+│   ├── requirements.txt      # Python dependencies
+│   └── .env.example
+│
+├── database/                 # Database schema docs & migrations
+│   └── README.md
+│
+├── .gitignore
+└── README.md
+```
 
 ---
 
