@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Area, createArea, deleteArea } from "../lib/api";
+import { Trash2, Plus, Layers, MapPin } from "lucide-react";
 
 interface AreaListProps {
   siteId: number;
@@ -9,7 +10,11 @@ interface AreaListProps {
   onAreaChanged: () => void;
 }
 
-export default function AreaList({ siteId, initialAreas, onAreaChanged }: AreaListProps) {
+export default function AreaList({
+  siteId,
+  initialAreas,
+  onAreaChanged,
+}: AreaListProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [name, setName] = useState("");
   const [areaType, setAreaType] = useState("FLOOR");
@@ -53,32 +58,33 @@ export default function AreaList({ siteId, initialAreas, onAreaChanged }: AreaLi
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-slate-800/80">
+    <div className="mt-4 pt-4 border-t border-[#E7E5E4]">
       <div className="flex items-center justify-between mb-3">
-        <h5 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Areas / Zones ({initialAreas.length})
+        <h5 className="text-xs font-bold uppercase tracking-wider text-[#6B7280]">
+          Areas & Zones ({initialAreas.length})
         </h5>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="text-xs font-medium text-blue-400 hover:text-blue-300 hover:underline"
+          className="text-xs font-semibold text-[#171717] hover:text-[#F5B82E] transition-colors flex items-center space-x-1"
         >
-          {showAddForm ? "Cancel" : "+ Add Area"}
+          <Plus className="w-3.5 h-3.5" />
+          <span>{showAddForm ? "Cancel" : "+ Add Area"}</span>
         </button>
       </div>
 
       {showAddForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-slate-950 p-4 rounded-lg border border-slate-800 mb-4 space-y-3"
+          className="bg-[#F6F6F3] p-4 rounded-xl border border-[#E7E5E4] mb-4 space-y-3"
         >
           {error && (
-            <div className="p-2 bg-rose-900/30 border border-rose-800 text-rose-300 text-xs rounded">
+            <div className="p-2 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg">
               {error}
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-[#171717] mb-1">
                 Area Name *
               </label>
               <input
@@ -86,18 +92,18 @@ export default function AreaList({ siteId, initialAreas, onAreaChanged }: AreaLi
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Floor 1, North Wing, Warehouse"
-                className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-[#E7E5E4] rounded-lg px-3 py-1.5 text-xs text-[#171717] placeholder-[#6B7280] focus:outline-none focus:border-[#F5B82E]"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-[#171717] mb-1">
                 Area Type
               </label>
               <select
                 value={areaType}
                 onChange={(e) => setAreaType(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-[#E7E5E4] rounded-lg px-3 py-1.5 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
               >
                 <option value="FLOOR">Floor</option>
                 <option value="BUILDING">Building</option>
@@ -111,7 +117,7 @@ export default function AreaList({ siteId, initialAreas, onAreaChanged }: AreaLi
             </div>
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-[#171717] mb-1">
               Description (Optional)
             </label>
             <input
@@ -119,21 +125,21 @@ export default function AreaList({ siteId, initialAreas, onAreaChanged }: AreaLi
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief description of work area"
-              className="w-full bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="w-full bg-white border border-[#E7E5E4] rounded-lg px-3 py-1.5 text-xs text-[#171717] placeholder-[#6B7280] focus:outline-none focus:border-[#F5B82E]"
             />
           </div>
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-1">
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="px-3 py-1 text-xs text-slate-400 hover:text-white"
+              className="px-3 py-1 text-xs text-[#6B7280] hover:text-[#171717]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded text-xs font-medium transition-colors"
+              className="px-4 py-1.5 bg-[#F5B82E] hover:bg-[#e0a724] disabled:opacity-50 text-[#0B0F10] rounded-lg text-xs font-bold transition-all shadow-xs"
             >
               {loading ? "Adding..." : "Save Area"}
             </button>
@@ -142,29 +148,29 @@ export default function AreaList({ siteId, initialAreas, onAreaChanged }: AreaLi
       )}
 
       {initialAreas.length === 0 ? (
-        <p className="text-xs text-slate-500 italic py-2">
-          No areas defined for this site yet.
+        <p className="text-xs text-[#6B7280] italic py-1">
+          No specific areas defined for this site yet.
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {initialAreas.map((area) => (
             <div
               key={area.id}
-              className="bg-slate-950/70 border border-slate-800/80 rounded-lg p-3 flex items-start justify-between group hover:border-slate-700 transition-colors"
+              className="bg-[#F6F6F3]/80 border border-[#E7E5E4] rounded-xl p-3 flex items-start justify-between group hover:border-[#F5B82E]/60 transition-all shadow-xs"
             >
               <div>
                 <div className="flex items-center space-x-2">
-                  <span className="font-semibold text-xs text-white">
+                  <span className="font-bold text-xs text-[#171717]">
                     {area.name}
                   </span>
                   {area.area_type && (
-                    <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold bg-slate-800 text-slate-300 rounded border border-slate-700">
+                    <span className="px-1.5 py-0.5 text-[10px] uppercase font-bold bg-white text-[#6B7280] rounded border border-[#E7E5E4]">
                       {area.area_type}
                     </span>
                   )}
                 </div>
                 {area.description && (
-                  <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
+                  <p className="text-[11px] text-[#6B7280] mt-0.5 line-clamp-1">
                     {area.description}
                   </p>
                 )}
@@ -172,21 +178,9 @@ export default function AreaList({ siteId, initialAreas, onAreaChanged }: AreaLi
               <button
                 onClick={() => handleDelete(area.id)}
                 title="Delete Area"
-                className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-rose-400 transition-opacity p-1"
+                className="opacity-0 group-hover:opacity-100 text-[#6B7280] hover:text-rose-600 transition-opacity p-1"
               >
-                <svg
-                  className="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
-                </svg>
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}

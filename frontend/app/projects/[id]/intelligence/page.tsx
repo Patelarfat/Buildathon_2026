@@ -5,11 +5,33 @@ import Link from "next/link";
 import {
   getProject,
   getProjectIntelligence,
-  Project,
+  ProjectDetail,
   ProjectIntelligence,
-  AreaRiskRankingItem,
-  RecurringIssue,
 } from "@/lib/api";
+import ProjectNav from "@/components/ProjectNav";
+import ProjectHeader from "@/components/ProjectHeader";
+import {
+  ArrowLeft,
+  RotateCw,
+  Building2,
+  Grid,
+  MapPin,
+  ShieldCheck,
+  AlertTriangle,
+  CheckCircle2,
+  Activity as ActivityIcon,
+  HardHat,
+  ShieldAlert,
+  Layers,
+  Info,
+  TrendingUp,
+  ChevronRight,
+  Brain,
+  FileText,
+  ClipboardCheck,
+  AlertCircle,
+  Package,
+} from "lucide-react";
 
 export default function ProjectIntelligencePage({
   params,
@@ -19,7 +41,7 @@ export default function ProjectIntelligencePage({
   const resolvedParams = use(params);
   const projectId = parseInt(resolvedParams.id, 10);
 
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProject] = useState<ProjectDetail | null>(null);
   const [intel, setIntel] = useState<ProjectIntelligence | null>(null);
   const [days, setDays] = useState<number>(7);
   const [loading, setLoading] = useState<boolean>(true);
@@ -30,10 +52,10 @@ export default function ProjectIntelligencePage({
       setLoading(true);
       setError(null);
       const [projData, intelData] = await Promise.all([
-        getProject(projectId),
+        getProject(projectId).catch(() => null),
         getProjectIntelligence(projectId, selectedDays),
       ]);
-      setProject(projData);
+      if (projData) setProject(projData);
       setIntel(intelData);
     } catch (err: any) {
       setError(err?.message || "Failed to load project intelligence data.");
@@ -48,99 +70,48 @@ export default function ProjectIntelligencePage({
     }
   }, [projectId, days]);
 
-  const getRiskColor = (level: string) => {
+  const getRiskStatusBadge = (level: string) => {
     switch (level) {
       case "CRITICAL":
-        return {
-          bg: "bg-red-500/10 border-red-500/30 text-red-400",
-          badge: "bg-red-600 text-white",
-          text: "text-red-400",
-          bar: "bg-red-500",
-        };
       case "HIGH":
-        return {
-          bg: "bg-orange-500/10 border-orange-500/30 text-orange-400",
-          badge: "bg-orange-600 text-white",
-          text: "text-orange-400",
-          bar: "bg-orange-500",
-        };
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+            {level} RISK
+          </span>
+        );
       case "MEDIUM":
-        return {
-          bg: "bg-amber-500/10 border-amber-500/30 text-amber-400",
-          badge: "bg-amber-600 text-white",
-          text: "text-amber-400",
-          bar: "bg-amber-500",
-        };
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-amber-50 text-amber-800 border border-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            MEDIUM RISK
+          </span>
+        );
       default:
-        return {
-          bg: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
-          badge: "bg-emerald-600 text-white",
-          text: "text-emerald-400",
-          bar: "bg-emerald-500",
-        };
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            LOW RISK
+          </span>
+        );
     }
-  };
-
-  const getTrendBadge = (trend: string, changePct?: number) => {
-    if (trend === "INCREASING") {
-      return (
-        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">
-          ↑ Increasing {changePct !== undefined ? `(+${changePct}%)` : ""}
-        </span>
-      );
-    }
-    if (trend === "DECREASING") {
-      return (
-        <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-          ↓ Improving {changePct !== undefined ? `(${changePct}%)` : ""}
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded bg-slate-700 text-slate-300 border border-slate-600">
-        → Stable
-      </span>
-    );
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        {/* Navigation & Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6">
-          <div>
-            <div className="flex items-center gap-2 text-sm text-slate-400 mb-1">
-              <Link href="/projects" className="hover:text-cyan-400 transition">
-                Projects
-              </Link>
-              <span>/</span>
-              <Link
-                href={`/projects/${projectId}`}
-                className="hover:text-cyan-400 transition"
-              >
-                {project?.name || `Project #${projectId}`}
-              </Link>
-              <span>/</span>
-              <span className="text-slate-200">Intelligence Engine</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
-                <span className="bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 bg-clip-text text-transparent">
-                  Construction Intelligence Engine
-                </span>
-              </h1>
-              <span className="text-xs uppercase px-2.5 py-1 rounded-full font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                Phase 5 Active
-              </span>
-            </div>
-            <p className="text-sm text-slate-400 mt-1">
-              Transparent, explainable risk assessment, recurring issue detection, and multi-level intelligence.
-            </p>
-          </div>
-
-          {/* Time Window Selector */}
-          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1.5 rounded-xl">
-            <span className="text-xs font-medium text-slate-400 px-2">Window:</span>
+    <div className="min-h-screen bg-[#F6F6F3] text-[#171717]">
+      {/* Shared Project Context Header & Stationary Navigation */}
+      <ProjectHeader
+        projectId={projectId}
+        projectName={project?.name || `Project #${projectId}`}
+        status={project?.status}
+        location={project?.location}
+        siteCount={project?.sites?.length}
+        areaCount={project?.sites?.reduce((acc, s) => acc + (s.areas?.length || 0), 0)}
+        startDate={project?.start_date}
+        endDate={project?.end_date}
+        actions={
+          <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-[#E7E5E4] shadow-xs">
+            <span className="text-xs font-semibold text-slate-500 px-2">WINDOW</span>
             {[
               { label: "24 Hours", val: 1 },
               { label: "7 Days", val: 7 },
@@ -149,10 +120,10 @@ export default function ProjectIntelligencePage({
               <button
                 key={t.val}
                 onClick={() => setDays(t.val)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
                   days === t.val
-                    ? "bg-cyan-600 text-white shadow-sm"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800"
+                    ? "bg-[#F5B82E] text-[#171717] shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 }`}
               >
                 {t.label}
@@ -161,186 +132,184 @@ export default function ProjectIntelligencePage({
             <button
               onClick={() => fetchIntelligence(days)}
               title="Refresh intelligence data"
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition"
+              className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors border-l border-[#E7E5E4] pl-2.5"
             >
-              🔄
+              <RotateCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
             </button>
           </div>
+        }
+      />
+
+      <main className="max-w-[1280px] mx-auto px-4 sm:px-8 py-8 space-y-8">
+        {/* Page Title */}
+        <div className="space-y-1.5 pb-2">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#171717] tracking-tight leading-tight">
+            Risk & Site Intelligence
+          </h1>
+          <p className="text-sm sm:text-base text-slate-500 font-normal leading-relaxed">
+            Understand project risk, recurring issues and site-level safety signals from your field data.
+          </p>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
+          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
             {error}
           </div>
         )}
 
         {loading && !intel ? (
-          <div className="flex flex-col items-center justify-center py-24 space-y-4">
-            <div className="w-10 h-10 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
-            <p className="text-sm text-slate-400">Evaluating multi-level site intelligence...</p>
+          <div className="bg-white border border-[#E7E5E4] rounded-2xl p-16 flex flex-col items-center justify-center text-center space-y-3 shadow-xs">
+            <div className="w-8 h-8 border-3 border-[#F5B82E] border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-medium text-slate-500">
+              Evaluating multi-level site intelligence & deterministic risk...
+            </p>
           </div>
         ) : intel ? (
           <>
-            {/* Top Row: Master Risk Score Hero & Explainability */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Score & Risk Card */}
-              <div
-                className={`lg:col-span-5 rounded-2xl border p-6 flex flex-col justify-between ${
-                  getRiskColor(intel.project_risk.level).bg
-                }`}
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                      Overall Project Safety Risk
-                    </span>
-                    <span
-                      className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${
-                        getRiskColor(intel.project_risk.level).badge
-                      }`}
-                    >
-                      {intel.project_risk.level} RISK
-                    </span>
-                  </div>
-
-                  <div className="flex items-baseline gap-3 my-2">
-                    <span className="text-6xl font-black tracking-tight text-white">
-                      {intel.project_risk.score}
-                    </span>
-                    <span className="text-xl font-medium text-slate-400">/ 100</span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 mt-4">
-                    {getTrendBadge(
-                      intel.trends.safety_trend,
-                      intel.trends.safety_change_pct
-                    )}
-                    <span className="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
-                      Confidence: <strong>{intel.project_risk.data_confidence}</strong>
-                    </span>
-                    <span className="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
-                      Window: <strong>{intel.time_window_days} Days</strong>
-                    </span>
-                  </div>
-
-                  {intel.highest_risk_area && (
-                    <div className="mt-6 p-3 rounded-xl bg-slate-900/80 border border-slate-800">
-                      <div className="text-xs text-slate-400 font-medium">Highest Risk Zone:</div>
-                      <div className="text-sm font-semibold text-white mt-0.5 flex items-center gap-1.5">
-                        <span className="text-amber-400">⚠</span> {intel.highest_risk_area}
-                        {intel.highest_risk_site && (
-                          <span className="text-xs text-slate-400 font-normal">
-                            ({intel.highest_risk_site})
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
+            {/* 2. HERO RISK SECTION (2-Column Analytics Layout) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* LEFT: OVERALL PROJECT RISK */}
+              <div className="lg:col-span-6 bg-white border border-[#E7E5E4] rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
+                <div className="flex items-center justify-between pb-3 border-b border-[#E7E5E4]">
+                  <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-500">
+                    OVERALL PROJECT RISK
+                  </span>
+                  {getRiskStatusBadge(intel.project_risk.level)}
                 </div>
 
-                {/* Sub-scores Mini Breakdown */}
-                <div className="mt-6 pt-4 border-t border-slate-800/60 space-y-2">
-                  <div className="text-xs font-semibold text-slate-400 mb-2">
-                    Capped Scoring Formula Components:
+                <div className="space-y-4">
+                  <div className="flex items-baseline space-x-2">
+                    <span className="text-6xl sm:text-7xl font-black tracking-tight text-[#171717]">
+                      {intel.project_risk.score}
+                    </span>
+                    <span className="text-2xl font-normal text-slate-400">/ 100</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      <div className="text-slate-400">AI Findings</div>
-                      <div className="font-bold text-white">
+
+                  {/* Horizontal Risk Spectrum Indicator */}
+                  <div className="space-y-2 pt-1">
+                    <div className="h-2 bg-slate-100 rounded-full relative overflow-hidden flex items-center">
+                      <div
+                        className="h-full bg-[#F5B82E] transition-all duration-300 rounded-full"
+                        style={{ width: `${Math.max(Math.min(intel.project_risk.score, 100), 4)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-xs font-bold text-slate-400 uppercase tracking-wider">
+                      <span className="text-emerald-600">LOW (0-30)</span>
+                      <span className="text-amber-600">MEDIUM (31-60)</span>
+                      <span className="text-rose-600">HIGH (61-100)</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-500 pt-2">
+                    <span className="font-semibold text-slate-900">
+                      Trend: {intel.trends.safety_trend}
+                    </span>
+                    <span>•</span>
+                    <span>Confidence: <strong>{intel.project_risk.data_confidence}</strong></span>
+                    <span>•</span>
+                    <span>Window: <strong>{intel.time_window_days} Days</strong></span>
+                  </div>
+                </div>
+
+                {/* Capped Scoring Formula Components */}
+                <div className="pt-5 border-t border-[#E7E5E4] space-y-3">
+                  <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-slate-700 block">
+                    SCORING BREAKDOWN
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="bg-[#FAF9F6] p-3.5 rounded-xl border border-[#E7E5E4]">
+                      <span className="text-xs text-slate-500 uppercase block font-semibold">AI Findings</span>
+                      <span className="font-extrabold text-[#171717] text-base mt-0.5 block">
                         {intel.project_risk.components.ai_findings} / 30
-                      </div>
+                      </span>
                     </div>
-                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      <div className="text-slate-400">Incidents</div>
-                      <div className="font-bold text-white">
+                    <div className="bg-[#FAF9F6] p-3.5 rounded-xl border border-[#E7E5E4]">
+                      <span className="text-xs text-slate-500 uppercase block font-semibold">Incidents</span>
+                      <span className="font-extrabold text-[#171717] text-base mt-0.5 block">
                         {intel.project_risk.components.incidents} / 30
-                      </div>
+                      </span>
                     </div>
-                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      <div className="text-slate-400">Observations</div>
-                      <div className="font-bold text-white">
+                    <div className="bg-[#FAF9F6] p-3.5 rounded-xl border border-[#E7E5E4]">
+                      <span className="text-xs text-slate-500 uppercase block font-semibold">Observations</span>
+                      <span className="font-extrabold text-[#171717] text-base mt-0.5 block">
                         {intel.project_risk.components.observations} / 15
-                      </div>
+                      </span>
                     </div>
-                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      <div className="text-slate-400">Inspections</div>
-                      <div className="font-bold text-white">
+                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E7E5E4]">
+                      <span className="text-[10px] text-slate-500 uppercase block font-semibold">Inspections</span>
+                      <span className="font-extrabold text-[#171717] text-sm mt-0.5 block">
                         {intel.project_risk.components.inspections} / 15
-                      </div>
+                      </span>
                     </div>
-                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      <div className="text-slate-400">Recurring</div>
-                      <div className="font-bold text-white">
+                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E7E5E4]">
+                      <span className="text-[10px] text-slate-500 uppercase block font-semibold">Recurring</span>
+                      <span className="font-extrabold text-[#171717] text-sm mt-0.5 block">
                         {intel.project_risk.components.recurring} / 15
-                      </div>
+                      </span>
                     </div>
-                    <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800">
-                      <div className="text-slate-400">Trend Adj.</div>
-                      <div className="font-bold text-white">
+                    <div className="bg-[#FAF9F6] p-3 rounded-xl border border-[#E7E5E4]">
+                      <span className="text-[10px] text-slate-500 uppercase block font-semibold">Trend Adj.</span>
+                      <span className="font-extrabold text-[#171717] text-sm mt-0.5 block">
                         {intel.project_risk.components.trend > 0
                           ? `+${intel.project_risk.components.trend}`
                           : intel.project_risk.components.trend}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Explainability Card */}
-              <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-lg font-bold text-white">
-                      Why is this project classified as{" "}
-                      <span className={getRiskColor(intel.project_risk.level).text}>
-                        {intel.project_risk.level} Risk
-                      </span>
-                      ?
-                    </span>
+              {/* RIGHT: RISK EXPLANATION */}
+              <div className="lg:col-span-6 bg-white border border-[#E7E5E4] rounded-2xl p-6 sm:p-8 shadow-xs flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div className="pb-3 border-b border-[#E7E5E4]">
+                    <h2 className="text-base sm:text-lg font-bold text-[#171717] tracking-tight">
+                      WHY THIS RISK SCORE?
+                    </h2>
+                    <p className="text-sm text-slate-500 mt-1">
+                      The intelligence engine provides transparent, deterministic reasons based on real site records.
+                    </p>
                   </div>
-                  <p className="text-xs text-slate-400 mb-4">
-                    The intelligence engine provides transparent, deterministic reasons based on real site records:
-                  </p>
 
-                  <div className="space-y-2.5">
+                  <div className="space-y-3">
+                    <span className="text-xs sm:text-sm font-extrabold text-slate-600 uppercase tracking-wider block">
+                      PRIMARY SIGNAL
+                    </span>
                     {intel.project_risk.reasons && intel.project_risk.reasons.length > 0 ? (
                       intel.project_risk.reasons.map((reason, idx) => (
                         <div
                           key={idx}
-                          className="flex items-start gap-3 p-3 rounded-xl bg-slate-950/80 border border-slate-800/80"
+                          className="p-4 rounded-xl bg-[#FAF9F6] border-l-4 border-l-[#F5B82E] border-y border-r border-[#E7E5E4] text-sm text-slate-800 font-medium leading-relaxed"
                         >
-                          <span className="text-cyan-400 text-sm mt-0.5">•</span>
-                          <span className="text-sm text-slate-200 leading-relaxed font-medium">
-                            {reason}
-                          </span>
+                          {reason}
                         </div>
                       ))
                     ) : (
-                      <div className="p-4 text-center text-sm text-slate-500">
-                        No active safety hazards recorded for this period.
+                      <div className="p-4 rounded-xl bg-[#FAF9F6] border border-[#E7E5E4] text-sm text-slate-500 text-center italic">
+                        No active safety issues or incidents recorded for the selected period.
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-slate-800 text-xs text-slate-500 italic">
-                  ℹ {intel.project_risk.disclaimer}
+                <div className="pt-4 border-t border-[#E7E5E4] text-xs sm:text-sm text-slate-500 italic">
+                  Note: {intel.project_risk.disclaimer}
                 </div>
               </div>
             </div>
 
-            {/* Recurring Issues Section */}
+            {/* 3. RECURRING ISSUES SECTION */}
             {intel.recurring_issues && intel.recurring_issues.length > 0 && (
-              <div className="bg-amber-500/5 border border-amber-500/30 rounded-2xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-amber-400 text-lg">⚠</span>
-                    <h2 className="text-lg font-bold text-white">
-                      Detected Recurring Issues (≥3 occurrences in 7-day window)
+              <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-[#E7E5E4]">
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="w-5 h-5 text-amber-500" />
+                    <h2 className="text-base sm:text-lg font-bold text-[#171717]">
+                      DETECTED RECURRING ISSUES
                     </h2>
                   </div>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                    {intel.recurring_issues.length} Active Recurring Problem(s)
+                  <span className="text-xs font-bold px-2.5 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                    {intel.recurring_issues.length} Active Problem(s)
                   </span>
                 </div>
 
@@ -348,40 +317,36 @@ export default function ProjectIntelligencePage({
                   {intel.recurring_issues.map((ri, idx) => (
                     <div
                       key={idx}
-                      className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-2"
+                      className="bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl p-4 space-y-3"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-800">
                           {ri.issue_category}
                         </span>
                         <span
-                          className={`text-xs font-bold px-2 py-0.5 rounded ${
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                             ri.severity === "HIGH" || ri.severity === "CRITICAL"
-                              ? "bg-red-500/20 text-red-300 border border-red-500/30"
-                              : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                              ? "bg-rose-100 text-rose-800"
+                              : "bg-amber-100 text-amber-800"
                           }`}
                         >
                           {ri.severity}
                         </span>
                       </div>
 
-                      <div className="font-bold text-white text-base">
+                      <div className="font-bold text-[#171717] text-sm">
                         {ri.issue_type.replace(/_/g, " ")}
                       </div>
 
-                      <div className="text-xs text-slate-400">
-                        Location:{" "}
-                        <strong className="text-slate-200">
-                          {ri.area_name || "General Area"}
-                        </strong>{" "}
-                        {ri.site_name ? `(${ri.site_name})` : ""}
+                      <div className="text-xs text-slate-500">
+                        Location: <strong className="text-slate-800">{ri.area_name || "General Area"}</strong>
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
-                        <span className="text-amber-400 font-bold">
+                      <div className="flex items-center justify-between pt-2 border-t border-[#E7E5E4] text-xs">
+                        <span className="text-amber-800 font-bold">
                           {ri.occurrence_count} Occurrences
                         </span>
-                        <span className="text-slate-400">
+                        <span className="text-slate-400 text-[11px]">
                           Last seen: {ri.last_seen.slice(0, 10)}
                         </span>
                       </div>
@@ -391,109 +356,84 @@ export default function ProjectIntelligencePage({
               </div>
             )}
 
-            {/* Area Risk Ranking Table */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
+            {/* 4. AREA SAFETY RANKING */}
+            <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E7E5E4]">
                 <div>
-                  <h2 className="text-lg font-bold text-white">
-                    Area Safety Risk Ranking
+                  <h2 className="text-base sm:text-lg font-bold text-[#171717]">
+                    AREA SAFETY RANKING
                   </h2>
-                  <p className="text-xs text-slate-400">
-                    Hierarchical drill-down showing risk scores and active issues sorted highest risk first.
+                  <p className="text-sm text-slate-500">
+                    Risk-ranked areas based on current site intelligence.
                   </p>
                 </div>
-                <span className="text-xs text-slate-400 bg-slate-800 px-3 py-1.5 rounded-lg">
+                <span className="text-xs sm:text-sm font-bold text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">
                   {intel.area_risks.length} Area(s) Monitored
                 </span>
               </div>
 
               {intel.area_risks.length === 0 ? (
-                <div className="text-center py-8 text-sm text-slate-500">
-                  No areas defined for this project yet.
+                <div className="py-12 text-center space-y-2">
+                  <div className="text-sm font-bold text-slate-800 uppercase">NO AREAS DEFINED</div>
+                  <p className="text-xs text-slate-500">
+                    Add site areas to begin monitoring area-level safety risk.
+                  </p>
+                  <Link
+                    href={`/projects/${projectId}`}
+                    className="inline-block mt-2 text-xs font-bold text-[#D99A16] hover:underline"
+                  >
+                    View Project Structure →
+                  </Link>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-950/60 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-800">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead className="bg-[#FAF9F6] text-slate-500 uppercase tracking-wider border-b border-[#E7E5E4] text-xs font-bold">
                       <tr>
-                        <th className="py-3 px-4">Rank / Area</th>
-                        <th className="py-3 px-4">Site</th>
-                        <th className="py-3 px-4">Risk Score</th>
-                        <th className="py-3 px-4">Level</th>
-                        <th className="py-3 px-4">AI PPE Findings</th>
-                        <th className="py-3 px-4">Incidents</th>
-                        <th className="py-3 px-4">Observations</th>
-                        <th className="py-3 px-4">Trend</th>
+                        <th className="py-3.5 px-4">Area</th>
+                        <th className="py-3.5 px-4">Site</th>
+                        <th className="py-3.5 px-4">Risk Score</th>
+                        <th className="py-3.5 px-4">Level</th>
+                        <th className="py-3.5 px-4">AI Findings</th>
+                        <th className="py-3.5 px-4">Incidents</th>
+                        <th className="py-3.5 px-4">Observations</th>
+                        <th className="py-3.5 px-4">Trend</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/60">
+                    <tbody className="divide-y divide-[#E7E5E4]">
                       {intel.area_risks.map((area, idx) => (
-                        <tr
-                          key={area.area_id}
-                          className="hover:bg-slate-850/40 transition"
-                        >
-                          <td className="py-3.5 px-4 font-semibold text-white">
-                            <div className="flex items-center gap-2">
-                              <span className="w-5 h-5 rounded-full bg-slate-800 text-xs flex items-center justify-center font-bold text-slate-400">
-                                #{idx + 1}
-                              </span>
-                              <span>{area.area_name}</span>
-                            </div>
+                        <tr key={area.area_id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-4 px-4 font-semibold text-slate-900">
+                            <span className="text-slate-400 mr-2">#{idx + 1}</span>
+                            {area.area_name}
                           </td>
-                          <td className="py-3.5 px-4 text-slate-400 text-xs">
-                            {area.site_name}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white text-base">
-                                {area.risk_score}
-                              </span>
-                              <div className="w-16 h-2 rounded-full bg-slate-800 overflow-hidden">
-                                <div
-                                  className={`h-full ${getRiskColor(area.risk_level).bar}`}
-                                  style={{ width: `${Math.min(area.risk_score, 100)}%` }}
-                                />
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <span
-                              className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                getRiskColor(area.risk_level).badge
-                              }`}
-                            >
-                              {area.risk_level}
+                          <td className="py-4 px-4 text-slate-500">{area.site_name}</td>
+                          <td className="py-4 px-4">
+                            <span className="font-bold text-[#171717] text-base mr-1">
+                              {area.risk_score}
                             </span>
+                            <span className="text-xs text-slate-400">/ 100</span>
                           </td>
-                          <td className="py-3.5 px-4 font-medium text-slate-300">
-                            {area.ai_findings_count > 0 ? (
-                              <span className="text-cyan-400 font-bold">
-                                {area.ai_findings_count}
-                              </span>
+                          <td className="py-4 px-4">
+                            {getRiskStatusBadge(area.risk_level)}
+                          </td>
+                          <td className="py-4 px-4 font-semibold text-slate-800">
+                            {area.ai_findings_count}
+                          </td>
+                          <td className="py-4 px-4 font-semibold text-rose-600">
+                            {area.incidents_count}
+                          </td>
+                          <td className="py-4 px-4 font-semibold text-amber-700">
+                            {area.observations_count}
+                          </td>
+                          <td className="py-4 px-4 text-slate-600 font-medium">
+                            {area.trend === "INCREASING" ? (
+                              <span className="text-rose-600">↑ Increasing</span>
+                            ) : area.trend === "DECREASING" ? (
+                              <span className="text-emerald-600">↓ Improving</span>
                             ) : (
-                              "0"
+                              "→ Stable"
                             )}
-                          </td>
-                          <td className="py-3.5 px-4 font-medium text-slate-300">
-                            {area.incidents_count > 0 ? (
-                              <span className="text-red-400 font-bold">
-                                {area.incidents_count}
-                              </span>
-                            ) : (
-                              "0"
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 font-medium text-slate-300">
-                            {area.observations_count > 0 ? (
-                              <span className="text-amber-400 font-bold">
-                                {area.observations_count}
-                              </span>
-                            ) : (
-                              "0"
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            {getTrendBadge(area.trend)}
                           </td>
                         </tr>
                       ))}
@@ -503,250 +443,116 @@ export default function ProjectIntelligencePage({
               )}
             </div>
 
-            {/* Safety Summary & PPE Breakdown */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Safety Summary Grid */}
-              <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-                <div>
-                  <h2 className="text-lg font-bold text-white">
-                    Field Safety & Inspection Metrics
+            {/* 5. FIELD METRICS & PPE BREAKDOWN */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* Safety Metrics */}
+              <div className="lg:col-span-6 bg-white border border-[#E7E5E4] rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
+                <div className="pb-3 border-b border-[#E7E5E4]">
+                  <h2 className="text-base sm:text-lg font-bold text-[#171717]">
+                    FIELD SAFETY & INSPECTION METRICS
                   </h2>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-sm text-slate-500">
                     Human-reported incidents vs AI early-warning findings.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400">AI PPE Findings</div>
-                    <div className="text-2xl font-bold text-cyan-400 mt-1">
+                  <div className="bg-[#FAF9F6] p-4 rounded-xl border border-[#E7E5E4]">
+                    <span className="text-xs text-slate-500 uppercase block font-semibold">AI PPE Findings</span>
+                    <span className="text-3xl font-black text-slate-900 mt-1 block">
                       {intel.safety_summary.ai_findings_open}
-                      <span className="text-xs text-slate-500 font-normal ml-1.5">
+                      <span className="text-xs font-normal text-slate-400 ml-1">
                         / {intel.safety_summary.ai_findings_total} total
                       </span>
-                    </div>
-                    <div className="text-xs text-slate-500 mt-1">Automated CV detections</div>
+                    </span>
                   </div>
 
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400">Human Incidents</div>
-                    <div className="text-2xl font-bold text-red-400 mt-1">
+                  <div className="bg-[#FAF9F6] p-4 rounded-xl border border-[#E7E5E4]">
+                    <span className="text-xs text-slate-500 uppercase block font-semibold">Human Incidents</span>
+                    <span className="text-3xl font-black text-rose-600 mt-1 block">
                       {intel.safety_summary.human_incidents_open}
-                      <span className="text-xs text-slate-500 font-normal ml-1.5">
+                      <span className="text-xs font-normal text-slate-400 ml-1">
                         / {intel.safety_summary.human_incidents_total} total
                       </span>
-                    </div>
-                    <div className="text-xs text-slate-500 mt-1">Confirmed officer reports</div>
+                    </span>
                   </div>
 
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400">Open Observations</div>
-                    <div className="text-2xl font-bold text-amber-400 mt-1">
+                  <div className="bg-[#FAF9F6] p-4 rounded-xl border border-[#E7E5E4]">
+                    <span className="text-xs text-slate-500 uppercase block font-semibold">Open Observations</span>
+                    <span className="text-3xl font-black text-amber-700 mt-1 block">
                       {intel.safety_summary.observations_open}
-                      <span className="text-xs text-slate-500 font-normal ml-1.5">
+                      <span className="text-xs font-normal text-slate-400 ml-1">
                         / {intel.safety_summary.observations_total} total
                       </span>
-                    </div>
-                    <div className="text-xs text-slate-500 mt-1">Field observations</div>
+                    </span>
                   </div>
 
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400">Inspection Failure Rate</div>
-                    <div className="text-2xl font-bold text-purple-400 mt-1">
+                  <div className="bg-[#FAF9F6] p-4 rounded-xl border border-[#E7E5E4]">
+                    <span className="text-xs text-slate-500 uppercase block font-semibold">Inspection Fail Rate</span>
+                    <span className="text-3xl font-black text-slate-900 mt-1 block">
                       {intel.safety_summary.inspection_failure_rate_pct}%
-                    </div>
-                    <div className="text-xs text-slate-500 mt-1">
-                      {intel.safety_summary.inspections_failed} failed of {intel.safety_summary.inspections_total}
-                    </div>
+                    </span>
                   </div>
-                </div>
-
-                <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs flex items-center justify-between text-slate-400">
-                  <span>Comparison: {intel.safety_summary.human_vs_ai_ratio}</span>
-                  {intel.safety_summary.avg_resolution_time_hours !== null && (
-                    <span>Avg Resolution: {intel.safety_summary.avg_resolution_time_hours} hrs</span>
-                  )}
                 </div>
               </div>
 
-              {/* PPE Violations Breakdown */}
-              <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-                <div>
-                  <h2 className="text-lg font-bold text-white">
-                    AI PPE Violation Distribution
+              {/* PPE Distribution */}
+              <div className="lg:col-span-6 bg-white border border-[#E7E5E4] rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
+                <div className="pb-3 border-b border-[#E7E5E4]">
+                  <h2 className="text-base sm:text-lg font-bold text-[#171717]">
+                    AI PPE VIOLATION DISTRIBUTION
                   </h2>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-sm text-slate-500">
                     Specific PPE violation types detected by Computer Vision models.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                      <span>👷</span> Missing Helmet
+                  <div className="bg-[#FAF9F6] p-4 rounded-xl border border-[#E7E5E4] flex items-center justify-between">
+                    <div className="flex items-center space-x-2.5">
+                      <HardHat className="w-5 h-5 text-slate-600" />
+                      <span className="text-sm font-semibold text-slate-700">Missing Helmet</span>
                     </div>
-                    <div className="text-2xl font-bold text-white mt-1">
+                    <span className="text-2xl font-bold text-slate-900">
                       {intel.safety_summary.ppe_breakdown.no_helmet}
-                    </div>
+                    </span>
                   </div>
 
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                      <span>🧤</span> Missing Gloves
+                  <div className="bg-[#FAF9F6] p-4 rounded-xl border border-[#E7E5E4] flex items-center justify-between">
+                    <div className="flex items-center space-x-2.5">
+                      <ShieldAlert className="w-5 h-5 text-slate-600" />
+                      <span className="text-sm font-semibold text-slate-700">Missing Gloves</span>
                     </div>
-                    <div className="text-2xl font-bold text-white mt-1">
+                    <span className="text-2xl font-bold text-slate-900">
                       {intel.safety_summary.ppe_breakdown.no_gloves}
-                    </div>
+                    </span>
                   </div>
 
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                      <span>🥾</span> Missing Boots
+                  <div className="bg-[#FAF9F6] p-4 rounded-xl border border-[#E7E5E4] flex items-center justify-between">
+                    <div className="flex items-center space-x-2.5">
+                      <Layers className="w-5 h-5 text-slate-600" />
+                      <span className="text-sm font-semibold text-slate-700">Missing Boots</span>
                     </div>
-                    <div className="text-2xl font-bold text-white mt-1">
+                    <span className="text-2xl font-bold text-slate-900">
                       {intel.safety_summary.ppe_breakdown.no_boots}
-                    </div>
+                    </span>
                   </div>
 
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400 flex items-center gap-1.5">
-                      <span>🥽</span> Missing Goggles
+                  <div className="bg-[#FAF9F6] p-4 rounded-xl border border-[#E7E5E4] flex items-center justify-between">
+                    <div className="flex items-center space-x-2.5">
+                      <CheckCircle2 className="w-5 h-5 text-slate-600" />
+                      <span className="text-sm font-semibold text-slate-700">Missing Goggles</span>
                     </div>
-                    <div className="text-2xl font-bold text-white mt-1">
+                    <span className="text-2xl font-bold text-slate-900">
                       {intel.safety_summary.ppe_breakdown.no_goggles}
-                    </div>
+                    </span>
                   </div>
-                </div>
-
-                {/* Visual Daily Series Bar Chart */}
-                {intel.trends.daily_series && intel.trends.daily_series.length > 0 && (
-                  <div>
-                    <div className="text-xs font-semibold text-slate-400 mb-3">
-                      Safety Activity Timeline ({days} Days):
-                    </div>
-                    <div className="grid grid-cols-7 gap-2">
-                      {intel.trends.daily_series.slice(-7).map((d, i) => (
-                        <div
-                          key={i}
-                          className="bg-slate-950 p-2 rounded-lg border border-slate-800 text-center"
-                        >
-                          <div className="text-[10px] text-slate-500 font-mono">
-                            {d.date.slice(5)}
-                          </div>
-                          <div
-                            className={`text-sm font-bold mt-1 ${
-                              d.total_safety > 0 ? "text-cyan-400" : "text-slate-600"
-                            }`}
-                          >
-                            {d.total_safety}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Progress & Operational Risk */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Progress Intelligence */}
-              <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-white">
-                      Progress & Workforce Intelligence
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                      Derived from daily supervisor reports.
-                    </p>
-                  </div>
-                  <span className="text-xs px-2.5 py-1 rounded font-bold bg-slate-800 text-slate-300 border border-slate-700">
-                    Trend: {intel.progress.progress_trend}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400">Latest Progress</div>
-                    <div className="text-xl font-bold text-white mt-1">
-                      {intel.progress.latest_progress_pct !== null
-                        ? `${intel.progress.latest_progress_pct}%`
-                        : "N/A"}
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400">Avg Workers On Site</div>
-                    <div className="text-xl font-bold text-white mt-1">
-                      {intel.progress.average_workers !== null
-                        ? intel.progress.average_workers
-                        : "N/A"}
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400">Blocked Days</div>
-                    <div className="text-xl font-bold text-amber-400 mt-1">
-                      {intel.progress.blocked_days_count}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Operational Risk */}
-              <div className="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg font-bold text-white">
-                      Operational Risk Summary
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                      Materials supply & site blockers (Kept separate from safety score).
-                    </p>
-                  </div>
-                  <span
-                    className={`text-xs px-2.5 py-1 rounded font-bold ${
-                      intel.operational_risk.operational_risk_level === "HIGH"
-                        ? "bg-red-500/20 text-red-300 border border-red-500/30"
-                        : intel.operational_risk.operational_risk_level === "MEDIUM"
-                        ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                        : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                    }`}
-                  >
-                    {intel.operational_risk.operational_risk_level} OP RISK
-                  </span>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  {intel.operational_risk.low_stock_materials.length > 0 && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-300">
-                      <strong>Low Stock Alert:</strong>{" "}
-                      {intel.operational_risk.low_stock_materials
-                        .map((m) => `${m.material_name} (${m.quantity} ${m.unit})`)
-                        .join(", ")}
-                    </div>
-                  )}
-
-                  {intel.operational_risk.open_blockers.length > 0 && (
-                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300">
-                      <strong>Active Site Blocker:</strong>{" "}
-                      {intel.operational_risk.open_blockers.join(" | ")}
-                    </div>
-                  )}
-
-                  {intel.operational_risk.low_stock_materials.length === 0 &&
-                    intel.operational_risk.open_blockers.length === 0 && (
-                      <div className="p-4 text-center text-slate-500">
-                        No material shortages or active site blockers recorded.
-                      </div>
-                    )}
                 </div>
               </div>
             </div>
           </>
         ) : null}
-      </div>
+      </main>
     </div>
   );
 }

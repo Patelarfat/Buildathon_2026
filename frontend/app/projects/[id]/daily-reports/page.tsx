@@ -12,7 +12,26 @@ import {
   deleteDailyReport,
   getUsers,
 } from "../../../../lib/api";
-import ProjectNav from "../../../../components/ProjectNav";
+import ProjectNav from "@/components/ProjectNav";
+import ProjectHeader from "@/components/ProjectHeader";
+import {
+  ArrowLeft,
+  FileText,
+  Plus,
+  Search,
+  Building2,
+  Grid,
+  Calendar,
+  Users,
+  CloudSun,
+  Wrench,
+  Package,
+  AlertTriangle,
+  CheckCircle2,
+  Trash2,
+  X,
+  TrendingUp,
+} from "lucide-react";
 
 export default function DailyReportsPage({
   params,
@@ -27,6 +46,10 @@ export default function DailyReportsPage({
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Search and Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterTab, setFilterTab] = useState<"all" | "blockers">("all");
 
   // Form State
   const [showForm, setShowForm] = useState(false);
@@ -146,413 +169,519 @@ export default function DailyReportsPage({
 
   const currentSite = project?.sites.find((s) => s.id === Number(selectedSiteId));
 
+  const filteredReports = reports.filter((r) => {
+    const matchesSearch =
+      searchQuery === "" ||
+      r.report_date.includes(searchQuery) ||
+      r.work_completed?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.site?.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    if (filterTab === "blockers") {
+      return matchesSearch && (r.issues || r.blockers);
+    }
+    return matchesSearch;
+  });
+
+  const latestReport = reports.length > 0 ? reports[0] : null;
+
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb */}
-      <div className="mb-4 flex items-center space-x-2 text-xs text-slate-400">
-        <Link href="/projects" className="hover:text-white">
-          Projects
-        </Link>
-        <span>/</span>
-        <Link href={`/projects/${projectId}`} className="hover:text-white">
-          {project?.name || `Project #${projectId}`}
-        </Link>
-        <span>/</span>
-        <span className="text-slate-200 font-medium">Daily Site Reports</span>
-      </div>
-
-      <ProjectNav projectId={projectId} />
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-800 mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center space-x-3">
-            <span>📋 Daily Site Reports</span>
-            <span className="text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2.5 py-0.5 rounded-full">
-              {reports.length} Reports
-            </span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Log shift completions, labor counts, equipment, weather, and daily impediments
-          </p>
-        </div>
-
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-blue-600/30 self-start sm:self-auto"
-        >
-          {showForm ? "Close Form" : "+ File Daily Report"}
-        </button>
-      </div>
-
-      {error && (
-        <div className="p-4 bg-rose-950/40 border border-rose-800 text-rose-300 text-sm rounded-xl mb-6">
-          {error}
-        </div>
-      )}
-
-      {/* Form */}
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl mb-8 space-y-6"
-        >
-          <h3 className="text-lg font-bold text-white">Submit Shift Daily Report</h3>
-          {formError && (
-            <div className="p-3 bg-rose-900/30 border border-rose-800 text-rose-300 text-xs rounded-xl">
-              {formError}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Report Date *
-              </label>
-              <input
-                type="date"
-                value={reportDate}
-                onChange={(e) => setReportDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Construction Site *
-              </label>
-              <select
-                value={selectedSiteId}
-                onChange={(e) => {
-                  setSelectedSiteId(Number(e.target.value));
-                  setSelectedAreaId("");
-                }}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                required
-              >
-                <option value="">Select Site</option>
-                {project?.sites.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Specific Area (Optional)
-              </label>
-              <select
-                value={selectedAreaId}
-                onChange={(e) => setSelectedAreaId(e.target.value ? Number(e.target.value) : "")}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="">Overall Site</option>
-                {currentSite?.areas.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.area_type || "Zone"})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Reported By *
-              </label>
-              <select
-                value={reportedBy}
-                onChange={(e) => setReportedBy(Number(e.target.value))}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                required
-              >
-                {users.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} ({u.role})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Estimated Progress % (0–100)
-              </label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={progressPercentage}
-                onChange={(e) => setProgressPercentage(e.target.value === "" ? "" : Number(e.target.value))}
-                placeholder="e.g. 45"
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                On-Site Workers Count
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={workersCount}
-                onChange={(e) => setWorkersCount(e.target.value === "" ? "" : Number(e.target.value))}
-                placeholder="e.g. 32"
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Weather Conditions
-              </label>
-              <input
-                type="text"
-                value={weather}
-                onChange={(e) => setWeather(e.target.value)}
-                placeholder="e.g. Sunny, 30°C / Rain"
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Work Completed Today
-              </label>
-              <textarea
-                value={workCompleted}
-                onChange={(e) => setWorkCompleted(e.target.value)}
-                rows={3}
-                placeholder="Details on tasks and milestones completed today..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Work Planned Next Shift
-              </label>
-              <textarea
-                value={workPlanned}
-                onChange={(e) => setWorkPlanned(e.target.value)}
-                rows={3}
-                placeholder="Tasks scheduled for the upcoming shift..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Equipment Deployed
-              </label>
-              <input
-                type="text"
-                value={equipmentUsed}
-                onChange={(e) => setEquipmentUsed(e.target.value)}
-                placeholder="e.g. 2x JCB Excavator, 1x Tower Crane, Concrete Mixer"
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Materials Consumed
-              </label>
-              <input
-                type="text"
-                value={materialsUsed}
-                onChange={(e) => setMaterialsUsed(e.target.value)}
-                placeholder="e.g. 120 bags cement, 3 tons rebar"
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Issues / Delays
-              </label>
-              <textarea
-                value={issues}
-                onChange={(e) => setIssues(e.target.value)}
-                rows={2}
-                placeholder="Any minor or major site issues..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Blockers / Stoppages
-              </label>
-              <textarea
-                value={blockers}
-                onChange={(e) => setBlockers(e.target.value)}
-                rows={2}
-                placeholder="Critical blockers halting work..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Additional Notes
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-                placeholder="General shift logs and notes..."
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-xs text-slate-400 hover:text-white"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white text-xs font-semibold rounded-lg transition-colors"
-            >
-              {submitting ? "Submitting..." : "Save Daily Report"}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Reports List */}
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-slate-900 border border-slate-800 rounded-2xl h-40 animate-pulse" />
-          ))}
-        </div>
-      ) : reports.length === 0 ? (
-        <div className="text-center py-16 bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl p-8">
-          <div className="text-3xl mb-2">📋</div>
-          <h3 className="text-base font-bold text-white mb-1">No Daily Reports Logged</h3>
-          <p className="text-xs text-slate-400 max-w-sm mx-auto mb-4">
-            Daily logs provide historical tracking of progress, manpower, and site blockers.
-          </p>
+    <div className="min-h-screen bg-[#F6F6F3] text-[#171717]">
+      {/* Shared Project Context Header & Stationary Navigation */}
+      <ProjectHeader
+        projectId={projectId}
+        projectName={project?.name || `Project #${projectId}`}
+        status={project?.status}
+        location={project?.location}
+        siteCount={project?.sites?.length}
+        areaCount={project?.sites?.reduce((acc, s) => acc + (s.areas?.length || 0), 0)}
+        startDate={project?.start_date}
+        endDate={project?.end_date}
+        actions={
           <button
-            onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg"
+            onClick={() => setShowForm(!showForm)}
+            className="px-5 py-2.5 bg-[#F5B82E] hover:bg-[#e0a727] text-[#171717] text-sm font-semibold rounded-xl transition-colors shadow-xs flex items-center space-x-2"
           >
-            File First Daily Report
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            <span>{showForm ? "Close Form" : "New Daily Report"}</span>
           </button>
+        }
+      />
+
+      <main className="max-w-[1280px] mx-auto px-4 sm:px-8 py-8 space-y-8">
+        {/* Page Title */}
+        <div className="space-y-1.5 pb-2">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#171717] tracking-tight leading-tight">
+            Daily Site Reports
+          </h1>
+          <p className="text-sm sm:text-base text-slate-500 font-normal leading-relaxed">
+            Track daily progress, manpower, equipment, conditions and site impediments.
+          </p>
         </div>
-      ) : (
-        <div className="space-y-4">
-          {reports.map((r) => (
-            <div
-              key={r.id}
-              className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4 hover:border-slate-700 transition-colors"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg font-bold text-white">📅 {r.report_date}</span>
-                  <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
-                    {r.site?.name || `Site #${r.site_id}`}
-                    {r.area && ` · ${r.area.name}`}
-                  </span>
-                  {r.progress_percentage !== null && r.progress_percentage !== undefined && (
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-full">
-                      {r.progress_percentage}% Progress
-                    </span>
-                  )}
-                </div>
 
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs text-slate-400">
-                    By {r.reporter?.name || `User #${r.reported_by}`}
-                  </span>
-                  <button
-                    onClick={() => handleDelete(r.id)}
-                    className="p-1 text-slate-500 hover:text-rose-400 rounded transition-colors"
-                    title="Delete Report"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                {r.work_completed && (
-                  <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                    <span className="text-slate-400 font-semibold block mb-1">✅ Work Completed:</span>
-                    <p className="text-slate-200 whitespace-pre-line">{r.work_completed}</p>
-                  </div>
-                )}
-                {r.work_planned && (
-                  <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
-                    <span className="text-slate-400 font-semibold block mb-1">🎯 Work Planned Next:</span>
-                    <p className="text-slate-200 whitespace-pre-line">{r.work_planned}</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-4 text-xs text-slate-400 pt-1">
-                {r.workers_count !== null && (
-                  <div>
-                    <span className="text-slate-500">👷 Workers:</span>{" "}
-                    <span className="text-slate-200 font-medium">{r.workers_count}</span>
-                  </div>
-                )}
-                {r.weather && (
-                  <div>
-                    <span className="text-slate-500">⛅ Weather:</span>{" "}
-                    <span className="text-slate-200 font-medium">{r.weather}</span>
-                  </div>
-                )}
-                {r.equipment_used && (
-                  <div>
-                    <span className="text-slate-500">🚜 Equipment:</span>{" "}
-                    <span className="text-slate-200 font-medium">{r.equipment_used}</span>
-                  </div>
-                )}
-                {r.materials_used && (
-                  <div>
-                    <span className="text-slate-500">🧱 Materials:</span>{" "}
-                    <span className="text-slate-200 font-medium">{r.materials_used}</span>
-                  </div>
-                )}
-              </div>
-
-              {(r.issues || r.blockers) && (
-                <div className="p-3 bg-rose-950/20 border border-rose-900/30 rounded-xl text-xs space-y-1">
-                  {r.issues && (
-                    <p className="text-rose-300">
-                      <span className="font-semibold text-rose-400">⚠️ Issues:</span> {r.issues}
-                    </p>
-                  )}
-                  {r.blockers && (
-                    <p className="text-rose-300">
-                      <span className="font-semibold text-rose-400">🛑 Blockers:</span> {r.blockers}
-                    </p>
-                  )}
-                </div>
-              )}
+        {/* 2. REPORT SUMMARY STRIP */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white border border-[#E7E5E4] p-5 rounded-2xl shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 block">Total Reports</span>
+              <div className="text-3xl font-black text-[#171717] mt-1">{reports.length}</div>
             </div>
-          ))}
+            <FileText className="w-6 h-6 text-slate-400" />
+          </div>
+
+          <div className="bg-white border border-[#E7E5E4] p-4 rounded-xl shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Latest Report</span>
+              <div className="text-sm font-bold text-slate-900 mt-1">
+                {latestReport ? latestReport.report_date : "—"}
+              </div>
+            </div>
+            <Calendar className="w-5 h-5 text-[#D99A16]" />
+          </div>
+
+          <div className="bg-white border border-[#E7E5E4] p-4 rounded-xl shadow-xs flex items-center justify-between">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Reporting Status</span>
+              <div className="text-sm font-bold text-slate-900 mt-1 flex items-center gap-1.5">
+                {reports.length > 0 ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Active Logging
+                  </>
+                ) : (
+                  <span className="text-slate-400 font-medium">No reports yet</span>
+                )}
+              </div>
+            </div>
+            <TrendingUp className="w-5 h-5 text-emerald-600" />
+          </div>
         </div>
-      )}
-    </main>
+
+        {/* 3. REPORT TOOLBAR */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-3 rounded-xl border border-[#E7E5E4] shadow-xs">
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search reports by date, site or keyword..."
+              className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-lg pl-9 pr-3 py-1.5 text-xs text-[#171717] placeholder-slate-400 focus:outline-none focus:border-[#F5B82E]"
+            />
+          </div>
+
+          <div className="flex items-center space-x-1.5 text-xs">
+            <button
+              onClick={() => setFilterTab("all")}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
+                filterTab === "all"
+                  ? "bg-[#171717] text-white"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
+            >
+              All Reports ({reports.length})
+            </button>
+            <button
+              onClick={() => setFilterTab("blockers")}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors ${
+                filterTab === "blockers"
+                  ? "bg-[#171717] text-white"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+              }`}
+            >
+              With Impediments
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
+            {error}
+          </div>
+        )}
+
+        {/* 4. SUBMIT DAILY REPORT FORM MODAL */}
+        {showForm && (
+          <form
+            onSubmit={handleSubmit}
+            className="bg-white border border-[#E7E5E4] rounded-2xl p-6 sm:p-8 shadow-xs space-y-6"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-[#E7E5E4]">
+              <h3 className="text-base font-bold text-[#171717] tracking-tight">Submit Shift Daily Report</h3>
+              <button type="button" onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-900">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {formError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-xl">
+                {formError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Report Date *
+                </label>
+                <input
+                  type="date"
+                  value={reportDate}
+                  onChange={(e) => setReportDate(e.target.value)}
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs font-semibold text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Construction Site *
+                </label>
+                <select
+                  value={selectedSiteId}
+                  onChange={(e) => {
+                    setSelectedSiteId(Number(e.target.value));
+                    setSelectedAreaId("");
+                  }}
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs font-semibold text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                  required
+                >
+                  <option value="">Select Site</option>
+                  {project?.sites.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Specific Area (Optional)
+                </label>
+                <select
+                  value={selectedAreaId}
+                  onChange={(e) => setSelectedAreaId(e.target.value ? Number(e.target.value) : "")}
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs font-semibold text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                >
+                  <option value="">Overall Site</option>
+                  {currentSite?.areas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Reported By *
+                </label>
+                <select
+                  value={reportedBy}
+                  onChange={(e) => setReportedBy(Number(e.target.value))}
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs font-semibold text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                  required
+                >
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name} ({u.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Estimated Progress % (0–100)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={progressPercentage}
+                  onChange={(e) => setProgressPercentage(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="e.g. 45"
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  On-Site Workers Count
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={workersCount}
+                  onChange={(e) => setWorkersCount(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="e.g. 32"
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Weather Conditions
+                </label>
+                <input
+                  type="text"
+                  value={weather}
+                  onChange={(e) => setWeather(e.target.value)}
+                  placeholder="e.g. Sunny, 30°C / Rain"
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Work Completed Today
+                </label>
+                <textarea
+                  value={workCompleted}
+                  onChange={(e) => setWorkCompleted(e.target.value)}
+                  rows={3}
+                  placeholder="Details on tasks and milestones completed today..."
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Work Planned Next Shift
+                </label>
+                <textarea
+                  value={workPlanned}
+                  onChange={(e) => setWorkPlanned(e.target.value)}
+                  rows={3}
+                  placeholder="Tasks scheduled for the upcoming shift..."
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Equipment Deployed
+                </label>
+                <input
+                  type="text"
+                  value={equipmentUsed}
+                  onChange={(e) => setEquipmentUsed(e.target.value)}
+                  placeholder="e.g. 2x JCB Excavator, 1x Tower Crane"
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Materials Consumed
+                </label>
+                <input
+                  type="text"
+                  value={materialsUsed}
+                  onChange={(e) => setMaterialsUsed(e.target.value)}
+                  placeholder="e.g. 120 bags cement, 3 tons rebar"
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Issues / Delays
+                </label>
+                <textarea
+                  value={issues}
+                  onChange={(e) => setIssues(e.target.value)}
+                  rows={2}
+                  placeholder="Minor or major site issues..."
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Blockers / Stoppages
+                </label>
+                <textarea
+                  value={blockers}
+                  onChange={(e) => setBlockers(e.target.value)}
+                  rows={2}
+                  placeholder="Critical blockers halting work..."
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Additional Notes
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  placeholder="General shift logs and notes..."
+                  className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-2 border-t border-[#E7E5E4]">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="px-5 py-2 bg-[#F5B82E] hover:bg-[#e0a727] text-[#171717] text-xs font-bold rounded-xl transition-colors shadow-xs"
+              >
+                {submitting ? "Submitting..." : "Save Daily Report"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* 5. REPORTS FEED OR EMPTY STATE */}
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white border border-[#E7E5E4] rounded-2xl h-44 animate-pulse" />
+            ))}
+          </div>
+        ) : filteredReports.length === 0 ? (
+          /* EMPTY STATE */
+          <div className="bg-white border border-dashed border-[#E7E5E4] rounded-2xl p-12 text-center space-y-4 shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
+              <FileText className="w-6 h-6 text-slate-400" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-[#171717]">No Daily Reports Yet</h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Create your first site report to start building a clear operational history.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-4.5 py-2 bg-[#F5B82E] hover:bg-[#e0a727] text-[#171717] text-xs font-bold rounded-xl transition-colors shadow-xs inline-flex items-center space-x-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create Daily Report</span>
+            </button>
+            <p className="text-[11px] text-slate-400 block pt-1">
+              Reports capture progress, manpower, equipment, weather and site impediments.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {filteredReports.map((r) => (
+              <div
+                key={r.id}
+                className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-xs space-y-4 hover:shadow-md transition-all duration-200"
+              >
+                {/* Card Header & Date Badge */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E7E5E4]">
+                  <div className="flex items-center space-x-3">
+                    <div className="pl-3 border-l-3 border-l-[#F5B82E]">
+                      <span className="text-sm font-extrabold text-[#171717]">
+                        {r.report_date}
+                      </span>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                      {r.site?.name || `Site #${r.site_id}`}
+                      {r.area && ` · ${r.area.name}`}
+                    </span>
+                    {r.progress_percentage !== null && r.progress_percentage !== undefined && (
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                        {r.progress_percentage}% Progress
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-3 text-xs text-slate-500">
+                    <span>By {r.reporter?.name || `User #${r.reported_by}`}</span>
+                    <button
+                      onClick={() => handleDelete(r.id)}
+                      className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
+                      title="Delete Report"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2-Column Work Description */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                  {r.work_completed && (
+                    <div className="bg-[#FAF9F6] p-3.5 rounded-xl border border-[#E7E5E4] space-y-1">
+                      <span className="text-xs font-bold text-slate-900 block">Work Completed:</span>
+                      <p className="text-slate-700 leading-relaxed whitespace-pre-line">{r.work_completed}</p>
+                    </div>
+                  )}
+                  {r.work_planned && (
+                    <div className="bg-[#FAF9F6] p-3.5 rounded-xl border border-[#E7E5E4] space-y-1">
+                      <span className="text-xs font-bold text-slate-900 block">Work Planned Next:</span>
+                      <p className="text-slate-700 leading-relaxed whitespace-pre-line">{r.work_planned}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Operations Sub-metrics */}
+                <div className="flex flex-wrap gap-5 text-xs text-slate-600 pt-1">
+                  {r.workers_count !== null && (
+                    <div className="flex items-center space-x-1.5">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Workers: <strong className="text-[#171717]">{r.workers_count}</strong></span>
+                    </div>
+                  )}
+                  {r.weather && (
+                    <div className="flex items-center space-x-1.5">
+                      <CloudSun className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Weather: <strong className="text-[#171717]">{r.weather}</strong></span>
+                    </div>
+                  )}
+                  {r.equipment_used && (
+                    <div className="flex items-center space-x-1.5">
+                      <Wrench className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Equipment: <strong className="text-[#171717]">{r.equipment_used}</strong></span>
+                    </div>
+                  )}
+                  {r.materials_used && (
+                    <div className="flex items-center space-x-1.5">
+                      <Package className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Materials: <strong className="text-[#171717]">{r.materials_used}</strong></span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Issues & Blockers Banner */}
+                {(r.issues || r.blockers) && (
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs space-y-1 text-rose-900 font-medium">
+                    {r.issues && (
+                      <p>
+                        <strong className="text-rose-700">Issues:</strong> {r.issues}
+                      </p>
+                    )}
+                    {r.blockers && (
+                      <p>
+                        <strong className="text-rose-700">Blockers:</strong> {r.blockers}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
   );
 }

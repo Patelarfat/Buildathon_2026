@@ -16,8 +16,34 @@ import {
 } from "../../../lib/api";
 import { statusColors } from "../../../components/ProjectCard";
 import ProjectNav from "../../../components/ProjectNav";
+import ProjectHeader from "../../../components/ProjectHeader";
 import SiteList from "../../../components/SiteList";
 import MemberList from "../../../components/MemberList";
+import {
+  ArrowLeft,
+  MapPin,
+  Building2,
+  Grid,
+  Calendar,
+  ShieldCheck,
+  Activity as ActivityIcon,
+  AlertTriangle,
+  CheckCircle2,
+  Brain,
+  Bot,
+  Camera,
+  FileText,
+  ShieldAlert,
+  ClipboardCheck,
+  AlertCircle,
+  Package,
+  ArrowRight,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Radio,
+  Plus,
+} from "lucide-react";
 
 export default function ProjectDetailPage({
   params,
@@ -33,6 +59,7 @@ export default function ProjectDetailPage({
   const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showOverflowMenu, setShowOverflowMenu] = useState(false);
 
   // Edit project state
   const [isEditing, setIsEditing] = useState(false);
@@ -69,7 +96,6 @@ export default function ProjectDetailPage({
     }
   };
 
-
   useEffect(() => {
     if (projectId) {
       loadProject();
@@ -93,7 +119,7 @@ export default function ProjectDetailPage({
       setIsEditing(false);
     } catch (err: any) {
       alert(err.message || "Failed to update project");
-    } finally {
+    } flex: {
       setSaving(false);
     }
   };
@@ -117,13 +143,14 @@ export default function ProjectDetailPage({
 
   if (loading) {
     return (
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-slate-800 rounded w-1/4"></div>
-          <div className="h-40 bg-slate-900 border border-slate-800 rounded-2xl"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-64 bg-slate-900 border border-slate-800 rounded-2xl"></div>
-            <div className="h-64 bg-slate-900 border border-slate-800 rounded-2xl"></div>
+      <main className="min-h-[calc(100vh-4.5rem)] bg-[#F6F6F3] py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 animate-pulse">
+          <div className="h-6 bg-[#E7E5E4] rounded w-1/6"></div>
+          <div className="h-32 bg-white border border-[#E7E5E4] rounded-2xl"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-24 bg-white border border-[#E7E5E4] rounded-xl"></div>
+            ))}
           </div>
         </div>
       </main>
@@ -132,16 +159,19 @@ export default function ProjectDetailPage({
 
   if (error || !project) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-16 text-center">
-        <div className="bg-rose-950/40 border border-rose-800 rounded-2xl p-8">
-          <div className="text-3xl mb-3">⚠️</div>
-          <h2 className="text-xl font-bold text-white mb-2">Project Not Found</h2>
-          <p className="text-sm text-rose-300 mb-6">{error || "Could not retrieve project data."}</p>
+      <main className="min-h-[calc(100vh-4.5rem)] bg-[#F6F6F3] py-16 text-center">
+        <div className="max-w-md mx-auto bg-white border border-rose-200 rounded-2xl p-8 shadow-sm space-y-4">
+          <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h2 className="text-xl font-bold text-[#171717]">Project Not Found</h2>
+          <p className="text-xs text-rose-600">{error || "Could not retrieve project data."}</p>
           <Link
             href="/projects"
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#F5B82E] hover:bg-[#e0a724] text-[#0B0F10] text-xs font-bold rounded-xl shadow-xs"
           >
-            ← Back to Projects
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to Projects</span>
           </Link>
         </div>
       </main>
@@ -149,420 +179,494 @@ export default function ProjectDetailPage({
   }
 
   const statusStyle = statusColors[project.status] || {
-    bg: "bg-slate-800",
-    text: "text-slate-300",
-    border: "border-slate-700",
+    bg: "bg-slate-100",
+    text: "text-slate-700",
+    border: "border-slate-200",
+    dot: "bg-slate-400",
   };
 
   const fieldModules = [
-    { title: "Site Photos", desc: "Inspection & visual captures", icon: "📸", href: `/projects/${projectId}/photos`, count: activities.filter(a => a.type === "PHOTO").length },
-    { title: "Daily Reports", desc: "Shift progress & manpower logs", icon: "📋", href: `/projects/${projectId}/daily-reports`, count: activities.filter(a => a.type === "REPORT").length },
-    { title: "Safety Incidents", desc: "PPE & hazard violation logs", icon: "⚠️", href: `/projects/${projectId}/incidents`, count: activities.filter(a => a.type === "INCIDENT").length },
-    { title: "Inspections", desc: "Quality & equipment audits", icon: "🔍", href: `/projects/${projectId}/inspections`, count: activities.filter(a => a.type === "INSPECTION").length },
-    { title: "Observations", desc: "Defects & recurring snags", icon: "👁️", href: `/projects/${projectId}/observations`, count: activities.filter(a => a.type === "OBSERVATION").length },
-    { title: "Materials", desc: "Stock & delivery inventory", icon: "🧱", href: `/projects/${projectId}/materials`, count: activities.filter(a => a.type === "MATERIAL").length },
+    { title: "Site Photos", desc: "Inspection & visual captures", icon: Camera, href: `/projects/${projectId}/photos`, count: activities.filter(a => a.type === "PHOTO").length },
+    { title: "Daily Reports", desc: "Shift progress & manpower logs", icon: FileText, href: `/projects/${projectId}/daily-reports`, count: activities.filter(a => a.type === "REPORT").length },
+    { title: "Safety Incidents", desc: "PPE & hazard violation logs", icon: ShieldAlert, href: `/projects/${projectId}/incidents`, count: activities.filter(a => a.type === "INCIDENT").length },
+    { title: "Inspections", desc: "Quality & equipment audits", icon: ClipboardCheck, href: `/projects/${projectId}/inspections`, count: activities.filter(a => a.type === "INSPECTION").length },
+    { title: "Observations", desc: "Defects & recurring snags", icon: AlertCircle, href: `/projects/${projectId}/observations`, count: activities.filter(a => a.type === "OBSERVATION").length },
+    { title: "Materials", desc: "Stock & delivery inventory", icon: Package, href: `/projects/${projectId}/materials`, count: activities.filter(a => a.type === "MATERIAL").length },
   ];
 
+  const openIssuesCount = aiSummary?.open_findings ?? 0;
+  const highSeverityCount = aiSummary?.high_severity ?? 0;
+
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Breadcrumb & Top Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center space-x-2 text-xs text-slate-400">
-          <Link href="/projects" className="hover:text-white">
-            Projects
-          </Link>
-          <span>/</span>
-          <span className="text-slate-200 font-medium truncate max-w-xs">{project.name}</span>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="px-3.5 py-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-colors"
-          >
-            {isEditing ? "Cancel Edit" : "Edit Project"}
-          </button>
-          <button
-            onClick={handleDelete}
-            className="px-3.5 py-1.5 text-xs font-semibold bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 rounded-lg transition-colors"
-          >
-            Delete Project
-          </button>
-        </div>
-      </div>
-
-      <ProjectNav projectId={projectId} />
-
-      {/* Edit Form or Info Card */}
-      {isEditing ? (
-        <form
-          onSubmit={handleUpdate}
-          className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4"
-        >
-          <h3 className="text-lg font-bold text-white">Update Project Information</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Project Name *
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Location
-              </label>
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Status *
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as ProjectStatus)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              >
-                <option value="PLANNING">Planning</option>
-                <option value="ACTIVE">Active</option>
-                <option value="ON_HOLD">On Hold</option>
-                <option value="COMPLETED">Completed</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
-                End Date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
-            />
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-2">
+    <main className="min-h-[calc(100vh-4.5rem)] bg-[#F6F6F3] text-[#171717] font-sans selection:bg-[#F5B82E] selection:text-[#0B0F10] pb-16">
+      
+      {/* Shared Project Context Header & Stationary Navigation */}
+      <ProjectHeader
+        projectId={projectId}
+        projectName={project.name}
+        status={project.status}
+        location={project.location}
+        siteCount={project.sites.length}
+        areaCount={project.sites.reduce((acc, s) => acc + (s.areas?.length || 0), 0)}
+        startDate={project.start_date}
+        endDate={project.end_date}
+        description={project.description}
+        actions={
+          <div className="flex items-center space-x-2 relative">
             <button
-              type="button"
-              onClick={() => setIsEditing(false)}
-              className="px-4 py-2 text-xs text-slate-400 hover:text-white"
+              onClick={() => setIsEditing(!isEditing)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold bg-white hover:bg-[#F6F6F3] text-[#171717] border border-[#E7E5E4] rounded-xl transition-colors shadow-xs"
             >
-              Cancel
+              <Edit className="w-3.5 h-3.5 text-[#6B7280]" />
+              <span>{isEditing ? "Cancel Edit" : "Edit Project"}</span>
             </button>
+
             <button
-              type="submit"
-              disabled={saving}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors"
+              onClick={() => setShowOverflowMenu(!showOverflowMenu)}
+              className="w-9 h-9 rounded-xl bg-white hover:bg-[#F6F6F3] border border-[#E7E5E4] flex items-center justify-center text-[#6B7280] hover:text-[#171717] transition-colors shadow-xs"
+              title="More options"
             >
-              {saving ? "Saving..." : "Save Project"}
+              <MoreHorizontal className="w-4 h-4" />
             </button>
-          </div>
-        </form>
-      ) : (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-6 border-b border-slate-800">
-            <div>
-              <div className="flex items-center space-x-3 mb-2">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-white">
-                  {project.name}
-                </h1>
-                <span
-                  className={`px-3 py-1 text-xs font-semibold rounded-full border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+
+            {showOverflowMenu && (
+              <div className="absolute right-0 top-11 w-44 bg-white border border-[#E7E5E4] rounded-xl shadow-xl z-30 py-1 text-xs">
+                <button
+                  onClick={() => {
+                    setShowOverflowMenu(false);
+                    handleDelete();
+                  }}
+                  className="w-full text-left px-3.5 py-2 text-rose-600 hover:bg-rose-50 font-medium flex items-center gap-2"
                 >
-                  {project.status}
-                </span>
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Delete Project</span>
+                </button>
               </div>
-              {project.description && (
-                <p className="text-sm text-slate-300 max-w-3xl leading-relaxed">
-                  {project.description}
-                </p>
-              )}
-            </div>
+            )}
           </div>
+        }
+      />
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6">
-            <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
-              <span className="text-[11px] font-medium text-slate-400 block">📍 Location</span>
-              <span className="text-xs font-semibold text-white mt-1 block">
-                {project.location || "Not specified"}
-              </span>
-            </div>
-            <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
-              <span className="text-[11px] font-medium text-slate-400 block">📅 Start Date</span>
-              <span className="text-xs font-semibold text-white mt-1 block">
-                {project.start_date || "Not set"}
-              </span>
-            </div>
-            <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
-              <span className="text-[11px] font-medium text-slate-400 block">🏁 Target Completion</span>
-              <span className="text-xs font-semibold text-white mt-1 block">
-                {project.end_date || "Not set"}
-              </span>
-            </div>
-            <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800/80">
-              <span className="text-[11px] font-medium text-slate-400 block">📊 Sites & Members</span>
-              <span className="text-xs font-semibold text-white mt-1 block">
-                {project.sites.length} Sites · {project.members.length} Members
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Main Container */}
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-8 pt-8 space-y-8">
 
-      {/* Field Data Modules Quick Navigation Grid */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-bold text-white flex items-center space-x-2">
-          <span>📡 Field Data Collection Modules (Phase 3)</span>
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {fieldModules.map((mod) => (
-            <Link
-              key={mod.href}
-              href={mod.href}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-4 hover:border-blue-500/50 hover:bg-slate-800/50 transition-all flex flex-col justify-between group shadow-lg"
-            >
+        {/* Edit Form Toggle Surface */}
+        {isEditing && (
+          <form
+            onSubmit={handleUpdate}
+            className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-sm space-y-4 text-[#171717]"
+          >
+            <h3 className="text-base font-bold text-[#171717] border-b border-[#E7E5E4] pb-2">Update Project Information</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <div className="text-2xl mb-2">{mod.icon}</div>
-                <h4 className="text-xs font-bold text-white group-hover:text-blue-400 transition-colors">
-                  {mod.title}
-                </h4>
-                <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">
-                  {mod.desc}
-                </p>
+                <label className="block text-xs font-semibold text-[#171717] mb-1">
+                  Project Name *
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-[#F6F6F3] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                  required
+                />
               </div>
-              <div className="mt-3 pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
-                <span className="text-slate-500">Records:</span>
-                <span className="font-bold text-blue-400 bg-blue-950/50 border border-blue-900/50 px-1.5 py-0.2 rounded">
-                  {mod.count}
+              <div>
+                <label className="block text-xs font-semibold text-[#171717] mb-1">
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full bg-[#F6F6F3] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#171717] mb-1">
+                  Status *
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+                  className="w-full bg-[#F6F6F3] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                >
+                  <option value="PLANNING">Planning</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="ON_HOLD">On Hold</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#171717] mb-1">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-[#F6F6F3] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#171717] mb-1">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full bg-[#F6F6F3] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-[#171717] mb-1">
+                Description
+              </label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className="w-full bg-[#F6F6F3] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 text-xs font-semibold text-[#6B7280] hover:text-[#171717]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-5 py-2.5 bg-[#F5B82E] hover:bg-[#e0a724] disabled:opacity-50 text-[#0B0F10] text-xs font-bold rounded-xl transition-all shadow-xs"
+              >
+                {saving ? "Saving..." : "Save Project"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* 6. COMMAND CENTER KPI SUMMARY ROW */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-[#171717] tracking-tight">Project Overview</h2>
+            <span className="text-xs text-[#6B7280]">Real-time operational status</span>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Project Risk */}
+            <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 space-y-1 shadow-xs">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280] block">
+                PROJECT RISK
+              </span>
+              <div className="flex items-center justify-between pt-0.5">
+                <span className="text-xl font-extrabold text-emerald-700 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  Low
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Stable
                 </span>
               </div>
-            </Link>
-          ))}
-        </div>
-      </div>
+            </div>
 
-      {/* Phase 5: Construction Intelligence Engine Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-cyan-950/40 to-slate-900 border border-cyan-500/30 rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-cyan-950">
-          <div>
-            <h3 className="text-base font-bold text-white flex items-center space-x-2">
-              <span>🧠 Construction Intelligence Engine (Phase 5)</span>
-              <span className="text-[10px] font-mono bg-cyan-900/60 text-cyan-300 border border-cyan-700/60 px-2 py-0.5 rounded font-bold">
-                LIVE RISK & TRENDS
+            {/* Progress */}
+            <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 space-y-1 shadow-xs">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280] block">
+                PROGRESS
               </span>
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Explainable safety risk scores, area rankings, recurring issue detection, and operational risk summaries
-            </p>
-          </div>
-          <Link
-            href={`/projects/${projectId}/intelligence`}
-            className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-cyan-950 flex items-center gap-1.5 self-start sm:self-auto"
-          >
-            <span>Open Intelligence Dashboard</span>
-            <span>→</span>
-          </Link>
-        </div>
+              <div className="flex items-center justify-between pt-0.5">
+                <span className="text-xl font-extrabold text-[#171717]">
+                  76%
+                </span>
+                <span className="text-[10px] font-semibold text-[#6B7280]">
+                  On track
+                </span>
+              </div>
+            </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-          <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
-            <span className="text-2xl">📊</span>
-            <div>
-              <div className="text-[11px] text-slate-400">Explainable Safety Risk</div>
-              <div className="text-sm font-bold text-white mt-0.5">Capped Multi-Factor Scoring</div>
-            </div>
-          </div>
-          <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
-            <span className="text-2xl">⚠</span>
-            <div>
-              <div className="text-[11px] text-slate-400">Recurring Problem Alert</div>
-              <div className="text-sm font-bold text-white mt-0.5">≥3 Incidents per Zone Filter</div>
-            </div>
-          </div>
-          <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 flex items-center gap-3">
-            <span className="text-2xl">📍</span>
-            <div>
-              <div className="text-[11px] text-slate-400">Area Hierarchy Ranking</div>
-              <div className="text-sm font-bold text-white mt-0.5">Dynamic Risk Ranking by Area</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* AI PPE Safety Intelligence Summary (Phase 4) */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/30 to-slate-900 border border-indigo-900/50 rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-indigo-950">
-          <div>
-            <h3 className="text-base font-bold text-white flex items-center space-x-2">
-              <span>⚡ AI PPE Computer Vision Intelligence (Phase 4)</span>
-              <span className="text-[10px] font-mono bg-indigo-900/60 text-indigo-300 border border-indigo-700/60 px-2 py-0.5 rounded">
-                YOLO v1
+            {/* Open Issues */}
+            <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 space-y-1 shadow-xs">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280] block">
+                OPEN ISSUES
               </span>
+              <div className="flex items-center justify-between pt-0.5">
+                <span className="text-xl font-extrabold text-[#171717]">
+                  {String(openIssuesCount).padStart(2, "0")}
+                </span>
+                <span className="text-[10px] font-semibold text-[#6B7280]">
+                  {highSeverityCount > 0 ? `${highSeverityCount} High` : "All Minor"}
+                </span>
+              </div>
+            </div>
+
+            {/* Field Activity */}
+            <div className="bg-white border border-[#E7E5E4] rounded-2xl p-5 space-y-1 shadow-xs">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280] block">
+                FIELD ACTIVITY
+              </span>
+              <div className="flex items-center justify-between pt-0.5">
+                <span className="text-xl font-extrabold text-[#171717]">
+                  {String(activities.length).padStart(2, "0")}
+                </span>
+                <span className="text-[10px] font-semibold text-[#6B7280]">
+                  Events logged
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 7. WHAT NEEDS ATTENTION? PANEL */}
+        <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-[#F5B82E]" />
+              <span>WHAT NEEDS ATTENTION?</span>
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Automated PPE compliance, violation detection, and human verification monitoring
-            </p>
+            <span className="text-xs text-[#6B7280] font-medium">Automated Site Monitor</span>
           </div>
-          <Link
-            href={`/projects/${projectId}/photos`}
-            className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold self-start sm:self-auto flex items-center space-x-1"
-          >
-            <span>Open Photos & Vision →</span>
-          </Link>
+
+          {openIssuesCount > 0 ? (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-semibold flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>{openIssuesCount} safety observations or open findings require review on this job site.</span>
+              </div>
+              <Link
+                href={`/projects/${projectId}/observations`}
+                className="text-xs font-bold text-[#171717] hover:text-[#F5B82E] transition-colors shrink-0"
+              >
+                Review issues →
+              </Link>
+            </div>
+          ) : (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>✓ No critical alerts or urgent safety blockers detected on site. Operations are running normally.</span>
+            </div>
+          )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
-            <span className="text-[11px] font-medium text-slate-400 block">📸 Photos Analyzed</span>
-            <span className="text-lg font-extrabold text-white mt-1 block">
-              {aiSummary?.photos_analyzed ?? 0} <span className="text-xs font-normal text-slate-500">/ {aiSummary?.total_photos ?? 0}</span>
-            </span>
+        {/* 11. PROJECT INTELLIGENCE & AI ASSISTANT PANEL */}
+        <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-xs space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E7E5E4]">
+            <div className="space-y-0.5">
+              <h3 className="text-base font-bold text-[#171717] flex items-center gap-2">
+                <Brain className="w-5 h-5 text-[#F5B82E]" />
+                <span>PROJECT INTELLIGENCE</span>
+              </h3>
+              <p className="text-xs text-[#6B7280] font-normal">
+                Multi-factor risk analytics, zone vulnerability rankings, and AI computer vision compliance stream.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-3 self-start sm:self-auto">
+              <Link
+                href={`/projects/${projectId}/assistant`}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#F6F6F3] border border-[#E7E5E4] hover:bg-slate-100 text-[#171717] transition-colors"
+              >
+                <Bot className="w-3.5 h-3.5 text-[#6B7280]" />
+                <span>Ask AI Assistant</span>
+              </Link>
+
+              <Link
+                href={`/projects/${projectId}/intelligence`}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-[#F5B82E] hover:bg-[#e0a724] text-[#0B0F10] transition-all shadow-xs"
+              >
+                <span>Open Intelligence</span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#0B0F10]" />
+              </Link>
+            </div>
           </div>
-          <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-800/80">
-            <span className="text-[11px] font-medium text-slate-400 block">⚠️ AI Findings</span>
-            <span className="text-lg font-extrabold text-white mt-1 block">
-              {aiSummary?.total_findings ?? 0}
-            </span>
-          </div>
-          <div className="bg-slate-950/70 p-3 rounded-xl border border-rose-950/60">
-            <span className="text-[11px] font-medium text-rose-300 block">🚨 Open Issues</span>
-            <span className="text-lg font-extrabold text-rose-400 mt-1 block">
-              {aiSummary?.open_findings ?? 0}
-            </span>
-          </div>
-          <div className="bg-slate-950/70 p-3 rounded-xl border border-rose-950/60">
-            <span className="text-[11px] font-medium text-rose-300 block">🔴 High Severity</span>
-            <span className="text-lg font-extrabold text-rose-400 mt-1 block">
-              {aiSummary?.high_severity ?? 0}
-            </span>
-          </div>
-          <div className="bg-slate-950/70 p-3 rounded-xl border border-amber-950/60">
-            <span className="text-[11px] font-medium text-amber-300 block">🟡 Medium Severity</span>
-            <span className="text-lg font-extrabold text-amber-400 mt-1 block">
-              {aiSummary?.medium_severity ?? 0}
-            </span>
-          </div>
-          <div className="bg-slate-950/70 p-3 rounded-xl border border-emerald-950/60">
-            <span className="text-[11px] font-medium text-emerald-300 block">✓ Resolved / Reviewed</span>
-            <span className="text-lg font-extrabold text-emerald-400 mt-1 block">
-              {aiSummary?.resolved_findings ?? 0}
-            </span>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-[#F6F6F3] border border-[#E7E5E4] p-4 rounded-xl">
+              <span className="text-[11px] font-semibold text-[#6B7280] block">Photos Analyzed</span>
+              <span className="text-lg font-extrabold text-[#171717] mt-1 block">
+                {aiSummary?.photos_analyzed ?? 0} <span className="text-xs font-normal text-[#6B7280]">/ {aiSummary?.total_photos ?? 0}</span>
+              </span>
+            </div>
+
+            <div className="bg-[#F6F6F3] border border-[#E7E5E4] p-4 rounded-xl">
+              <span className="text-[11px] font-semibold text-[#6B7280] block">AI Findings</span>
+              <span className="text-lg font-extrabold text-[#171717] mt-1 block">
+                {aiSummary?.total_findings ?? 0}
+              </span>
+            </div>
+
+            <div className="bg-[#F6F6F3] border border-[#E7E5E4] p-4 rounded-xl">
+              <span className="text-[11px] font-semibold text-[#6B7280] block">High Severity</span>
+              <span className="text-lg font-extrabold text-rose-600 mt-1 block">
+                {aiSummary?.high_severity ?? 0}
+              </span>
+            </div>
+
+            <div className="bg-[#F6F6F3] border border-[#E7E5E4] p-4 rounded-xl">
+              <span className="text-[11px] font-semibold text-[#6B7280] block">Resolved / Reviewed</span>
+              <span className="text-lg font-extrabold text-emerald-700 mt-1 block">
+                {aiSummary?.resolved_findings ?? 0}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content Grid: Sites on Left/Top, Members on Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        {/* 10. FIELD ACTIVITY & MODULES GRID */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-[#171717]">FIELD ACTIVITY MODULES</h3>
+            <span className="text-xs text-[#6B7280]">Live operational modules</span>
+          </div>
 
-        {/* Sites & Areas */}
-        <SiteList
-          projectId={project.id}
-          sites={project.sites || []}
-          onSitesChanged={loadProject}
-        />
-
-        {/* Project Members */}
-        <MemberList
-          projectId={project.id}
-          members={project.members || []}
-          onMembersChanged={loadProject}
-        />
-      </div>
-
-      {/* Unified Activity Feed */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-          <h3 className="text-base font-bold text-white flex items-center space-x-2">
-            <span>⚡ Recent Project Activity & Evidence Stream</span>
-            <span className="text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
-              {activities.length} Events
-            </span>
-          </h3>
-          <span className="text-xs text-slate-400">Real-Time Traceability</span>
-        </div>
-
-        {activities.length === 0 ? (
-          <p className="text-xs text-slate-400 py-6 text-center italic">
-            No field activity recorded yet. Start by uploading site photos, logging daily reports, or recording inspections.
-          </p>
-        ) : (
-          <div className="divide-y divide-slate-800/60 max-h-96 overflow-y-auto pr-1">
-            {activities.slice(0, 15).map((act, idx) => (
-              <div key={idx} className="py-3 flex items-start justify-between gap-4 text-xs">
-                <div className="flex items-start space-x-3">
-                  <span className="text-base mt-0.5">
-                    {act.type === "PHOTO" && "📸"}
-                    {act.type === "REPORT" && "📋"}
-                    {act.type === "INCIDENT" && "⚠️"}
-                    {act.type === "INSPECTION" && "🔍"}
-                    {act.type === "OBSERVATION" && "👁️"}
-                    {act.type === "MATERIAL" && "🧱"}
-                  </span>
-                  <div>
-                    <div className="flex items-center space-x-2">
-                      <strong className="text-slate-100">{act.title}</strong>
-                      <span className="px-1.5 py-0.2 text-[10px] uppercase font-bold bg-slate-800 text-slate-300 rounded">
-                        {act.type}
-                      </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {fieldModules.map((mod) => {
+              const ModIcon = mod.icon;
+              return (
+                <Link
+                  key={mod.href}
+                  href={mod.href}
+                  className="bg-white border border-[#E7E5E4] hover:border-[#F5B82E] rounded-2xl p-4 transition-all flex flex-col justify-between group shadow-xs hover:shadow-md"
+                >
+                  <div className="space-y-2">
+                    <div className="w-9 h-9 rounded-xl bg-[#F6F6F3] text-[#171717] flex items-center justify-center group-hover:bg-[#F5B82E] group-hover:text-[#0B0F10] transition-colors border border-[#E7E5E4]">
+                      <ModIcon className="w-4.5 h-4.5 stroke-[2]" />
                     </div>
-                    {act.description && (
-                      <p className="text-slate-400 text-[11px] mt-0.5 line-clamp-1">
-                        {act.description}
-                      </p>
-                    )}
-                    <div className="flex items-center space-x-3 text-[10px] text-slate-500 mt-1">
-                      {act.site_name && <span>Site: {act.site_name}</span>}
-                      {act.area_name && <span>Area: {act.area_name}</span>}
-                      {act.user_name && <span>By: {act.user_name}</span>}
+                    <h4 className="text-xs font-bold text-[#171717] group-hover:text-[#171717] transition-colors">
+                      {mod.title}
+                    </h4>
+                    <p className="text-[10px] text-[#6B7280] leading-tight line-clamp-2">
+                      {mod.desc}
+                    </p>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-[#E7E5E4] flex items-center justify-between text-[11px]">
+                    <span className="text-[#6B7280]">Records:</span>
+                    <span className="font-bold text-[#171717] bg-[#F6F6F3] px-2 py-0.5 rounded-md border border-[#E7E5E4]">
+                      {mod.count}
+                    </span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 9. SITES & MEMBERS MANAGEMENT (Two Column Grid) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          <SiteList
+            projectId={project.id}
+            sites={project.sites || []}
+            onSitesChanged={loadProject}
+          />
+
+          <MemberList
+            projectId={project.id}
+            members={project.members || []}
+            onMembersChanged={loadProject}
+          />
+        </div>
+
+        {/* UNIFIED ACTIVITY FEED STREAM */}
+        <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E7E5E4]">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#171717] flex items-center gap-2">
+              <ActivityIcon className="w-4 h-4 text-[#F5B82E]" />
+              <span>RECENT PROJECT ACTIVITY STREAM</span>
+            </h3>
+            
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs text-[#6B7280] font-semibold">Real-Time Event Traceability</span>
+            </div>
+          </div>
+
+          {activities.length === 0 ? (
+            <div className="text-center py-8 bg-[#F6F6F3]/60 rounded-2xl border border-[#E7E5E4] space-y-3 my-2">
+              <div className="w-12 h-12 bg-amber-50 text-[#F5B82E] border border-amber-200/60 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+                <ActivityIcon className="w-6 h-6 stroke-[2]" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-[#171717]">
+                  No activity recorded yet
+                </h4>
+                <p className="text-xs text-[#6B7280] max-w-sm mx-auto mt-0.5">
+                  Project activity will appear here as your team uploads site photos, submits daily reports, records inspections, and logs field observations.
+                </p>
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-2">
+                <Link
+                  href={`/projects/${projectId}/photos`}
+                  className="px-3 py-1.5 bg-white hover:bg-[#F6F6F3] border border-[#E7E5E4] text-[#171717] text-xs font-semibold rounded-xl shadow-xs"
+                >
+                  Upload Site Photo
+                </Link>
+                <Link
+                  href={`/projects/${projectId}/daily-reports`}
+                  className="px-3 py-1.5 bg-white hover:bg-[#F6F6F3] border border-[#E7E5E4] text-[#171717] text-xs font-semibold rounded-xl shadow-xs"
+                >
+                  Create Daily Report
+                </Link>
+                <Link
+                  href={`/projects/${projectId}/inspections`}
+                  className="px-3 py-1.5 bg-white hover:bg-[#F6F6F3] border border-[#E7E5E4] text-[#171717] text-xs font-semibold rounded-xl shadow-xs"
+                >
+                  Record Inspection
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#E7E5E4] max-h-96 overflow-y-auto pr-1">
+              {activities.slice(0, 15).map((act, idx) => (
+                <div key={idx} className="py-3 flex items-start justify-between gap-4 text-xs hover:bg-[#FAF9F6] p-2 rounded-xl transition-colors">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-8 h-8 rounded-xl bg-[#F6F6F3] border border-[#E7E5E4] flex items-center justify-center text-[#171717] shrink-0 mt-0.5">
+                      {act.type === "PHOTO" && <Camera className="w-4 h-4 text-[#171717]" />}
+                      {act.type === "REPORT" && <FileText className="w-4 h-4 text-[#171717]" />}
+                      {act.type === "INCIDENT" && <ShieldAlert className="w-4 h-4 text-rose-600" />}
+                      {act.type === "INSPECTION" && <ClipboardCheck className="w-4 h-4 text-blue-600" />}
+                      {act.type === "OBSERVATION" && <AlertCircle className="w-4 h-4 text-amber-600" />}
+                      {act.type === "MATERIAL" && <Package className="w-4 h-4 text-[#171717]" />}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center space-x-2">
+                        <strong className="text-[#171717] font-bold">{act.title}</strong>
+                        <span className="px-2 py-0.5 text-[10px] uppercase font-bold bg-[#F6F6F3] text-[#6B7280] rounded-md border border-[#E7E5E4]">
+                          {act.type}
+                        </span>
+                      </div>
+                      {act.description && (
+                        <p className="text-[#6B7280] text-xs mt-0.5 line-clamp-1 font-normal">
+                          {act.description}
+                        </p>
+                      )}
+                      <div className="flex items-center space-x-3 text-[10px] text-[#6B7280] mt-1">
+                        {act.site_name && <span>Site: {act.site_name}</span>}
+                        {act.area_name && <span>Area: {act.area_name}</span>}
+                        {act.user_name && <span>By: {act.user_name}</span>}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="text-right text-[11px] text-slate-400 shrink-0">
-                  <span>{act.date}</span>
+                  <div className="text-right text-[11px] text-[#6B7280] shrink-0">
+                    <span>{act.date}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
     </main>
   );
 }
+

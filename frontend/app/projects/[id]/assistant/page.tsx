@@ -1,9 +1,36 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useParams } from "next/navigation";
-import { getProject, chatWithAssistant, Project, AssistantChatResponse } from "@/lib/api";
+import { useState, useEffect, useRef, use } from "react";
+import Link from "next/link";
+import {
+  getProject,
+  getProjectDashboard,
+  chatWithAssistant,
+  ProjectDetail,
+  ManagerDashboardData,
+  AssistantChatResponse,
+} from "@/lib/api";
 import ProjectNav from "@/components/ProjectNav";
+import ProjectHeader from "@/components/ProjectHeader";
+import {
+  ArrowLeft,
+  MapPin,
+  Building2,
+  Grid,
+  Bot,
+  Sparkles,
+  Send,
+  Loader2,
+  ShieldCheck,
+  Activity as ActivityIcon,
+  AlertTriangle,
+  FileText,
+  ShieldAlert,
+  ArrowRight,
+  Brain,
+  Info,
+  CheckCircle2,
+} from "lucide-react";
 
 interface Message {
   id: string;
@@ -14,20 +41,49 @@ interface Message {
   isError?: boolean;
 }
 
-const SAMPLE_QUESTIONS = [
-  "What are the top safety risks on this project?",
-  "Why is the project risk high or medium?",
-  "Are there any recurring safety issues or trends?",
-  "List any unresolved safety incidents and failed inspections.",
-  "What is the status of critical materials and blockers?",
-  "Give me a summary of today's site activities and PPE compliance."
+const SUGGESTED_INSIGHTS = [
+  {
+    title: "What are the top safety risks?",
+    query: "What are the top safety risks on this project?",
+    category: "Safety & PPE",
+  },
+  {
+    title: "Why is the project risk high or medium?",
+    query: "Why is the project risk high or medium?",
+    category: "Risk Analytics",
+  },
+  {
+    title: "Are there recurring safety issues?",
+    query: "Are there any recurring safety issues or trends?",
+    category: "Operations",
+  },
+  {
+    title: "Which incidents are unresolved?",
+    query: "List any unresolved safety incidents and failed inspections.",
+    category: "Quality Control",
+  },
+  {
+    title: "What materials need attention?",
+    query: "What is the status of critical materials and blockers?",
+    category: "Supply & Stock",
+  },
+  {
+    title: "Summarize today's site activity.",
+    query: "Give me a summary of today's site activities and PPE compliance.",
+    category: "Daily Progress",
+  },
 ];
 
-export default function AssistantPage() {
-  const params = useParams();
-  const projectId = Number(params.id);
+export default function AssistantPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const resolvedParams = use(params);
+  const projectId = Number(resolvedParams.id);
 
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProject] = useState<ProjectDetail | null>(null);
+  const [dashboard, setDashboard] = useState<ManagerDashboardData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputQuery, setInputQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -38,10 +94,14 @@ export default function AssistantPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const p = await getProject(projectId);
+        const [p, d] = await Promise.all([
+          getProject(projectId),
+          getProjectDashboard(projectId).catch(() => null),
+        ]);
         setProject(p);
+        setDashboard(d);
       } catch (err: any) {
-        setError(err.message || "Failed to load project info");
+        setError(err.message || "Failed to load project details");
       }
     }
     if (projectId) {
@@ -102,193 +162,310 @@ export default function AssistantPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-      <div className="p-6 max-w-7xl mx-auto w-full flex-1 flex flex-col">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-800 gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🤖</span>
-              <h1 className="text-2xl font-bold text-white">GenAI Construction Assistant</h1>
-            </div>
-            <p className="text-sm text-slate-400 mt-1">
-              Natural-language project intelligence grounded in real PostgreSQL records and RiskEngine calculations.
-            </p>
+    <div className="min-h-screen bg-[#F6F6F3] text-[#171717]">
+      {/* Shared Project Context Header & Stationary Navigation */}
+      <ProjectHeader
+        projectId={projectId}
+        projectName={project?.name || "Construction AI Workspace"}
+        status={project?.status || "ACTIVE"}
+        location={project?.location}
+        siteCount={project?.sites?.length}
+        areaCount={dashboard?.project.area_count ?? 0}
+        startDate={project?.start_date}
+        endDate={project?.end_date}
+        actions={
+          <div className="flex items-center gap-2 bg-white border border-[#E7E5E4] px-4 py-2 rounded-xl text-xs sm:text-sm text-slate-700 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+            <span className="font-semibold">Live Project Context</span>
           </div>
-          {project && (
-            <div className="flex items-center gap-3">
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-900/60 text-blue-300 border border-blue-700">
-                {project.name} (ID #{project.id})
-              </span>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-                Live Isolated Context
-              </span>
-            </div>
-          )}
-        </div>
+        }
+      />
 
-        {/* Project Navigation Tabs */}
-        <div className="mt-4">
-          <ProjectNav projectId={projectId} />
-        </div>
+      <main className="max-w-[1280px] mx-auto px-4 sm:px-8 py-8 space-y-6">
 
         {error && (
-          <div className="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-sm text-red-200">
+          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
             {error}
           </div>
         )}
 
-        {/* Chat Area Container */}
-        <div className="mt-6 flex-1 flex flex-col bg-slate-950/60 border border-slate-800 rounded-xl overflow-hidden shadow-xl min-h-[500px]">
-          {/* Messages Stream */}
-          <div className="flex-1 p-4 md:p-6 overflow-y-auto space-y-6">
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto my-auto">
-                <div className="w-14 h-14 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-3xl mb-4">
-                  🏗️
+        {/* 2. MAIN WORKSPACE GRID */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          {/* CHAT WORKSPACE AREA */}
+          <div className="lg:col-span-8 flex flex-col bg-white border border-[#E7E5E4] rounded-2xl overflow-hidden shadow-xs min-h-[640px] max-h-[820px]">
+            {/* AI Workspace Header */}
+            <div className="p-4 sm:p-5 border-b border-[#E7E5E4] bg-[#FAF9F6] flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-xl bg-[#F5B82E]/20 border border-[#F5B82E]/40 text-[#0B0F14] flex items-center justify-center">
+                  <Brain className="w-5 h-5 text-[#D99A16]" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-200 mb-2">
-                  Ask Anything About This Project
-                </h3>
-                <p className="text-sm text-slate-400 mb-6">
-                  Queries are strictly grounded in project records, safety incidents, PPE scans, materials, inspections, and RiskEngine calculations.
-                </p>
-
-                <div className="w-full text-left">
-                  <p className="text-xs uppercase tracking-wider font-semibold text-slate-400 mb-3">
-                    Suggested Questions:
+                <div>
+                  <h2 className="text-base font-bold text-[#171717] tracking-tight flex items-center gap-2">
+                    <span>CONSTRUCTION INTELLIGENCE</span>
+                    <Sparkles className="w-3.5 h-3.5 text-[#D99A16]" />
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    AI PROJECT ASSISTANT — Ask questions about project health, safety, progress and field activity.
                   </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {SAMPLE_QUESTIONS.map((q, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleSend(q)}
-                        className="text-left text-xs p-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition-all duration-150 flex items-start gap-2"
-                      >
-                        <span className="text-blue-400 font-bold">›</span>
-                        <span>{q}</span>
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
-            ) : (
-              messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
-                >
-                  <div className="flex items-center gap-2 mb-1 px-1">
-                    <span className="text-xs font-medium text-slate-400">
-                      {msg.sender === "user" ? "You" : "Construction Assistant"}
-                    </span>
-                    <span className="text-[10px] text-slate-400">{msg.timestamp}</span>
+              <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                Grounded Context
+              </span>
+            </div>
+
+            {/* Chat Stream Area */}
+            <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-6 scrollbar-thin">
+              {messages.length === 0 ? (
+                /* EMPTY CHAT STATE */
+                <div className="py-6 sm:py-10 px-4 max-w-2xl mx-auto space-y-6 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-[#F5B82E]/20 border border-[#F5B82E]/40 text-[#D99A16] flex items-center justify-center mx-auto">
+                    <Brain className="w-6 h-6" />
                   </div>
 
-                  <div
-                    className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed ${
-                      msg.sender === "user"
-                        ? "bg-blue-600 text-white rounded-br-none shadow-md"
-                        : msg.isError
-                        ? "bg-red-950/70 text-red-200 border border-red-800 rounded-bl-none"
-                        : "bg-slate-900 border border-slate-800 text-slate-200 rounded-bl-none shadow-md"
-                    }`}
-                  >
-                    <div className="whitespace-pre-wrap font-sans">{msg.text}</div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-bold text-[#171717] tracking-tight">
+                      CONSTRUCTION INTELLIGENCE
+                    </h3>
+                    <p className="text-xs text-slate-500 leading-relaxed max-w-lg mx-auto">
+                      Get answers grounded in project records, safety incidents, inspections, PPE scans, materials, daily reports and risk analysis.
+                    </p>
+                  </div>
 
-                    {/* Sources & Citations */}
-                    {msg.sources && msg.sources.length > 0 && (
-                      <div className="mt-4 pt-3 border-t border-slate-800">
-                        <div className="text-[11px] uppercase tracking-wider font-semibold text-slate-400 mb-2">
-                          Referenced Project Sources:
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {msg.sources.map((src, sIdx) => (
-                            <span
-                              key={sIdx}
-                              className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-slate-300"
-                            >
-                              <span className="font-medium text-blue-400">{src.type}</span>
-                              {src.id && (
-                                <span className="text-slate-400 font-mono">#{src.id}</span>
-                              )}
-                              <span className="text-slate-400 truncate max-w-[200px]">({src.title})</span>
+                  <div className="pt-2 text-left space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">
+                        START WITH AN INSIGHT
+                      </span>
+                      <span className="text-[11px] text-slate-400">Click to run analysis</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {SUGGESTED_INSIGHTS.map((item, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSend(item.query)}
+                          className="p-3.5 rounded-xl bg-white border border-[#E7E5E4] hover:border-[#F5B82E] text-left transition-all duration-150 group flex flex-col justify-between space-y-2 hover:bg-[#FAF9F6] shadow-xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono text-[#D99A16] uppercase font-bold">
+                              {item.category}
                             </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                            <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#D99A16] group-hover:translate-x-0.5 transition-all" />
+                          </div>
+                          <span className="text-xs font-semibold text-slate-800 group-hover:text-slate-900 line-clamp-2">
+                            → {item.title}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              ))
-            )}
+              ) : (
+                /* ACTIVE MESSAGES STREAM */
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}
+                  >
+                    <div className="flex items-center gap-2 mb-1.5 px-1">
+                      <span className="text-[11px] font-bold text-slate-500">
+                        {msg.sender === "user" ? "You" : "Construction Intelligence"}
+                      </span>
+                      <span className="text-[10px] text-slate-400">{msg.timestamp}</span>
+                    </div>
 
-            {isLoading && (
-              <div className="flex items-start gap-3">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl rounded-bl-none p-4 shadow-md flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse delay-150" />
-                  <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse delay-300" />
-                  <span className="text-xs text-slate-400 ml-1">Analyzing project records...</span>
+                    <div
+                      className={`max-w-[88%] sm:max-w-[84%] rounded-2xl p-4 text-xs sm:text-sm leading-relaxed ${
+                        msg.sender === "user"
+                          ? "bg-[#171717] text-white rounded-tr-xs shadow-xs"
+                          : msg.isError
+                          ? "bg-rose-50 text-rose-800 border border-rose-200 rounded-tl-xs"
+                          : "bg-[#F9F9F8] border border-[#E7E5E4] text-slate-800 rounded-tl-xs shadow-xs space-y-3"
+                      }`}
+                    >
+                      <div className="whitespace-pre-wrap font-sans leading-relaxed">
+                        {msg.text}
+                      </div>
+
+                      {/* Sources & Citations */}
+                      {msg.sources && msg.sources.length > 0 && (
+                        <div className="pt-3 border-t border-[#E7E5E4] space-y-2">
+                          <span className="text-[10px] uppercase tracking-wider font-extrabold text-slate-500 block">
+                            REFERENCED PROJECT SOURCES
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {msg.sources.map((src, sIdx) => (
+                              <span
+                                key={sIdx}
+                                className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md bg-white border border-[#E7E5E4] text-slate-700 shadow-2xs"
+                              >
+                                <span className="font-bold text-[#D99A16]">{src.type}</span>
+                                {src.id && (
+                                  <span className="text-slate-400 font-mono">#{src.id}</span>
+                                )}
+                                {src.title && (
+                                  <span className="text-slate-500 truncate max-w-[180px]">
+                                    ({src.title})
+                                  </span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {isLoading && (
+                <div className="flex items-start gap-3">
+                  <div className="bg-[#F9F9F8] border border-[#E7E5E4] rounded-2xl rounded-tl-xs p-4 shadow-xs flex items-center space-x-3">
+                    <Loader2 className="w-4 h-4 text-[#D99A16] animate-spin" />
+                    <span className="text-xs text-slate-600 font-medium">
+                      Analyzing project records & safety data...
+                    </span>
+                  </div>
                 </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Quick Actions Stream Bar when active */}
+            {messages.length > 0 && (
+              <div className="px-4 py-2.5 bg-[#FAF9F6] border-t border-[#E7E5E4] flex items-center gap-2 overflow-x-auto text-xs text-slate-500 scrollbar-none">
+                <span className="whitespace-nowrap font-bold text-slate-700">Quick Analysis:</span>
+                <button
+                  onClick={() => handleSend("What are the recommended actions to reduce risk?")}
+                  className="whitespace-nowrap px-3 py-1 rounded-lg bg-white hover:bg-slate-50 border border-[#E7E5E4] text-slate-700 transition-colors shadow-2xs"
+                >
+                  Recommended Actions
+                </button>
+                <button
+                  onClick={() => handleSend("Are there any material shortages blocking work?")}
+                  className="whitespace-nowrap px-3 py-1 rounded-lg bg-white hover:bg-slate-50 border border-[#E7E5E4] text-slate-700 transition-colors shadow-2xs"
+                >
+                  Material Blockers
+                </button>
+                <button
+                  onClick={() => handleSend("Show PPE compliance breakdown")}
+                  className="whitespace-nowrap px-3 py-1 rounded-lg bg-white hover:bg-slate-50 border border-[#E7E5E4] text-slate-700 transition-colors shadow-2xs"
+                >
+                  PPE Breakdown
+                </button>
               </div>
             )}
-            <div ref={messagesEndRef} />
+
+            {/* INPUT COMPOSER BAR */}
+            <div className="p-4 bg-[#FAF9F6] border-t border-[#E7E5E4]">
+              <div className="flex gap-2.5 items-center">
+                <textarea
+                  rows={1}
+                  value={inputQuery}
+                  onChange={(e) => setInputQuery(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask anything about this project..."
+                  disabled={isLoading}
+                  className="flex-1 bg-white text-[#171717] placeholder-slate-400 text-xs sm:text-sm px-4 py-3 rounded-xl border border-[#D6D3D1] focus:outline-none focus:border-[#F5B82E] resize-none min-h-[46px] max-h-[120px] shadow-xs"
+                />
+                <button
+                  onClick={() => handleSend()}
+                  disabled={isLoading || !inputQuery.trim()}
+                  className="w-11 h-11 rounded-xl font-bold bg-[#F5B82E] hover:bg-[#e0a727] disabled:bg-slate-200 disabled:text-slate-400 text-[#171717] transition-colors flex items-center justify-center shrink-0 shadow-xs"
+                  title="Send Question"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="mt-2 text-[11px] text-slate-400 flex items-center justify-between">
+                <span>Shift + Enter for new line • Enter to send</span>
+                <span>Grounded Project Intelligence Active</span>
+              </div>
+            </div>
           </div>
 
-          {/* Quick suggestions when chat is active */}
-          {messages.length > 0 && (
-            <div className="px-4 py-2 bg-slate-950 border-t border-slate-800/80 flex items-center gap-2 overflow-x-auto text-xs text-slate-400">
-              <span className="whitespace-nowrap font-medium text-slate-400">Follow-up suggestions:</span>
-              <button
-                onClick={() => handleSend("What are the recommended actions to reduce risk?")}
-                className="whitespace-nowrap px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300"
-              >
-                Recommended Actions
-              </button>
-              <button
-                onClick={() => handleSend("Are there any material shortages blocking work?")}
-                className="whitespace-nowrap px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300"
-              >
-                Material Blockers
-              </button>
-              <button
-                onClick={() => handleSend("Show PPE compliance breakdown")}
-                className="whitespace-nowrap px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300"
-              >
-                PPE Breakdown
-              </button>
-            </div>
-          )}
+          {/* RIGHT-SIDE PROJECT SNAPSHOT PANEL */}
+          <div className="lg:col-span-4 space-y-6 hidden lg:block">
+            <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-xs space-y-5">
+              <div className="pb-3 border-b border-[#E7E5E4]">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center justify-between">
+                  <span>PROJECT SNAPSHOT</span>
+                  <span className="text-[10px] text-slate-400 font-mono">Real-Time</span>
+                </h3>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Real-time project context
+                </p>
+              </div>
 
-          {/* Input Bar */}
-          <div className="p-4 bg-slate-900/90 border-t border-slate-800">
-            <div className="flex gap-2">
-              <textarea
-                rows={1}
-                value={inputQuery}
-                onChange={(e) => setInputQuery(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about project risks, incidents, inspections, daily logs, PPE..."
-                disabled={isLoading}
-                className="flex-1 bg-slate-950 text-slate-100 placeholder-slate-400 text-sm px-4 py-3 rounded-xl border border-slate-800 focus:outline-none focus:border-blue-500 resize-none min-h-[44px] max-h-[120px]"
-              />
-              <button
-                onClick={() => handleSend()}
-                disabled={isLoading || !inputQuery.trim()}
-                className="px-5 py-3 rounded-xl font-medium text-sm bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-400 text-white transition-colors duration-150 flex items-center justify-center gap-2 shadow-lg shadow-blue-600/20"
-              >
-                <span>Send</span>
-                <span className="text-xs">↗</span>
-              </button>
-            </div>
-            <div className="mt-2 text-[11px] text-slate-400 flex items-center justify-between">
-              <span>Shift + Enter for new line • Enter to send</span>
-              <span>Project #{projectId} Isolation Guaranteed</span>
+              <div className="divide-y divide-[#E7E5E4] space-y-0">
+                {/* Risk Score */}
+                <div className="py-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase block">Risk Score</span>
+                    <div className="text-xl font-extrabold text-[#171717] mt-0.5">
+                      {dashboard?.executive_health.risk_score ?? 0}
+                      <span className="text-xs font-normal text-slate-400 ml-1">/ 100</span>
+                    </div>
+                  </div>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    {dashboard?.executive_health.risk_level ?? "LOW"}
+                  </span>
+                </div>
+
+                {/* Progress */}
+                <div className="py-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase block">Progress</span>
+                    <div className="text-xl font-extrabold text-[#171717] mt-0.5">
+                      {dashboard?.executive_health.progress_pct !== null && dashboard?.executive_health.progress_pct !== undefined
+                        ? `${dashboard.executive_health.progress_pct}%`
+                        : "N/A"}
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {dashboard?.progress.latest_workers ?? "N/A"} workers
+                  </span>
+                </div>
+
+                {/* Safety Issues */}
+                <div className="py-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase block">Safety Issues</span>
+                    <div className="text-xl font-extrabold text-[#171717] mt-0.5">
+                      {dashboard?.executive_health.open_safety_issues ?? 0}
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {dashboard?.safety.human_incidents_open ?? 0} Incidents
+                  </span>
+                </div>
+
+                {/* Observations */}
+                <div className="py-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase block">Observations</span>
+                    <div className="text-xl font-extrabold text-[#171717] mt-0.5">
+                      {dashboard?.executive_health.open_observations ?? 0}
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {dashboard?.safety.observations_total ?? 0} Total
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#FAF9F6] rounded-xl border border-[#E7E5E4] text-[11px] text-slate-600 flex items-start gap-2">
+                <Info className="w-4 h-4 text-[#D99A16] shrink-0 mt-0.5" />
+                <span>
+                  The AI Assistant evaluates all queries against live site records for project #{projectId}.
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

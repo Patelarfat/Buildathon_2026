@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useRef, useEffect } from "react";
 import { Project, ProjectStatus } from "../lib/api";
+import { MapPin, Building2, Grid, Calendar, ArrowRight, MoreHorizontal, Edit, Trash2 } from "lucide-react";
 
 interface ProjectCardProps {
   project: Project;
@@ -9,76 +11,190 @@ interface ProjectCardProps {
   onEdit?: (project: Project) => void;
 }
 
-export const statusColors: Record<ProjectStatus, { bg: string; text: string; border: string }> = {
-  PLANNING: { bg: "bg-blue-900/30", text: "text-blue-400", border: "border-blue-500/30" },
-  ACTIVE: { bg: "bg-emerald-900/30", text: "text-emerald-400", border: "border-emerald-500/30" },
-  ON_HOLD: { bg: "bg-amber-900/30", text: "text-amber-400", border: "border-amber-500/30" },
-  COMPLETED: { bg: "bg-purple-900/30", text: "text-purple-400", border: "border-purple-500/30" },
+export const statusColors: Record<ProjectStatus, { bg: string; text: string; border: string; dot: string }> = {
+  PLANNING: { bg: "bg-amber-50", text: "text-amber-800", border: "border-amber-200", dot: "bg-amber-500" },
+  ACTIVE: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200", dot: "bg-emerald-500" },
+  ON_HOLD: { bg: "bg-orange-50", text: "text-orange-800", border: "border-orange-200", dot: "bg-orange-500" },
+  COMPLETED: { bg: "bg-slate-100", text: "text-slate-700", border: "border-slate-200", dot: "bg-slate-400" },
 };
 
 export default function ProjectCard({ project, onDelete, onEdit }: ProjectCardProps) {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const statusStyle = statusColors[project.status] || {
-    bg: "bg-slate-800",
-    text: "text-slate-300",
-    border: "border-slate-700",
+    bg: "bg-slate-100",
+    text: "text-slate-700",
+    border: "border-slate-200",
+    dot: "bg-slate-400",
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const formatStatusLabel = (status: ProjectStatus) => {
+    switch (status) {
+      case "ACTIVE":
+        return "Active";
+      case "PLANNING":
+        return "Planning";
+      case "ON_HOLD":
+        return "On Hold";
+      case "COMPLETED":
+        return "Completed";
+      default:
+        return status;
+    }
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-slate-700 transition-all shadow-lg flex flex-col justify-between group">
-      <div>
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">
-            {project.name}
-          </h3>
-          <span
-            className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
-          >
-            {project.status}
-          </span>
-        </div>
-
-        {project.description && (
-          <p className="text-sm text-slate-400 line-clamp-2 mb-4">
-            {project.description}
-          </p>
-        )}
-
-        <div className="space-y-2 text-xs text-slate-400 mb-6 bg-slate-950/50 p-3 rounded-lg border border-slate-800/60">
-          <div className="flex items-center space-x-2">
-            <span className="text-slate-500 font-medium">📍 Location:</span>
-            <span className="text-slate-300 font-medium">{project.location || "Not specified"}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className="text-slate-500 font-medium">📅 Timeline:</span>
-            <span className="text-slate-300 font-medium">
-              {project.start_date || "N/A"} → {project.end_date || "N/A"}
-            </span>
-          </div>
+    <div className="bg-white border border-[#E4E7EC] hover:border-slate-300 rounded-2xl p-5 sm:p-6 transition-all duration-200 shadow-sm hover:shadow-md flex flex-col md:flex-row gap-6 items-stretch group">
+      
+      {/* Left Column: Project Construction Photography Thumbnail */}
+      <div
+        className="w-full md:w-56 h-44 md:h-auto rounded-xl bg-slate-200 bg-cover bg-center shrink-0 border border-slate-200 relative overflow-hidden min-h-[140px]"
+        style={{ backgroundImage: `url('/hero-construction.jpg')` }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 bg-[#0B0F14]/75 text-white backdrop-blur-sm text-[10px] font-semibold px-2.5 py-1 rounded-md border border-white/10">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Active construction</span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 pt-4 border-t border-slate-800">
-        <Link
-          href={`/projects/${project.id}`}
-          className="flex-1 text-center py-2 px-3 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shadow-sm shadow-blue-600/30"
-        >
-          View Details
-        </Link>
-        {onEdit && (
-          <button
-            onClick={() => onEdit(project)}
-            className="py-2 px-3 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition-colors"
+      {/* Right Column: Main Info & Actions */}
+      <div className="flex-1 flex flex-col justify-between space-y-4">
+        
+        {/* Top Header Row: Name, Location, Status Pill & Menu */}
+        <div className="space-y-1">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-xl font-bold text-[#111827] group-hover:text-[#D99A16] transition-colors line-clamp-1">
+              {project.name}
+            </h3>
+
+            <div className="flex items-center space-x-2 shrink-0 relative" ref={menuRef}>
+              {/* Status Badge */}
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${statusStyle.bg} ${statusStyle.text} ${statusStyle.border}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
+                {formatStatusLabel(project.status)}
+              </span>
+
+              {/* Overflow Actions Menu Button */}
+              <button
+                onClick={() => setShowMenu(!showMenu)}
+                className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 border border-[#E4E7EC] flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors"
+                title="Project Actions"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+
+              {/* Overflow Menu Dropdown */}
+              {showMenu && (
+                <div className="absolute right-0 top-9 w-40 bg-white border border-[#E4E7EC] rounded-xl shadow-xl z-20 py-1 space-y-0.5 text-xs text-slate-700">
+                  {onEdit && (
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        onEdit(project);
+                      }}
+                      className="w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-2 font-medium"
+                    >
+                      <Edit className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Edit Project</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDelete(project.id);
+                    }}
+                    className="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 flex items-center gap-2 font-medium border-t border-slate-100"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Delete Project</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Location */}
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+            <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span className="truncate">{project.location || "Solapur, Maharashtra"}</span>
+          </div>
+
+          {/* Description */}
+          <p className="text-xs sm:text-sm text-[#667085] line-clamp-2 pt-1 font-normal leading-relaxed">
+            {project.description || "Construction and infrastructure development project with multiple active sites and field operations."}
+          </p>
+        </div>
+
+        {/* Middle Row: Structured Metadata Grid (Sites, Areas, Timeline) */}
+        <div className="grid grid-cols-3 gap-3 py-3 px-4 bg-[#F8FAFC] border border-[#E4E7EC]/80 rounded-xl text-xs">
+          <div className="space-y-0.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+              SITES
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-slate-500" />
+              <span className="font-bold text-slate-900 text-sm">01</span>
+            </div>
+          </div>
+
+          <div className="space-y-0.5 border-l border-slate-200/80 pl-3">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+              AREAS
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Grid className="w-3.5 h-3.5 text-slate-500" />
+              <span className="font-bold text-slate-900 text-sm">00</span>
+            </div>
+          </div>
+
+          <div className="space-y-0.5 border-l border-slate-200/80 pl-3">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">
+              TIMELINE
+            </span>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+              <span className="font-bold text-slate-900 text-xs truncate">
+                {project.start_date || "Dec 2026"} — {project.end_date || "Dec 2027"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Row: Actions */}
+        <div className="flex items-center justify-end space-x-3 pt-1">
+          {onEdit && (
+            <button
+              onClick={() => onEdit(project)}
+              className="px-4 py-2 text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-[#E4E7EC] rounded-lg transition-colors"
+            >
+              Edit
+            </button>
+          )}
+          <Link
+            href={`/projects/${project.id}`}
+            className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-[#F5B82E] hover:bg-[#D99A16] text-[#0B0F14] transition-all shadow-sm active:scale-[0.98]"
           >
-            Edit
-          </button>
-        )}
-        <button
-          onClick={() => onDelete(project.id)}
-          className="py-2 px-3 text-xs font-semibold bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 rounded-lg transition-colors"
-        >
-          Delete
-        </button>
+            <span>Open project</span>
+            <ArrowRight className="w-4 h-4 text-[#0B0F14]" />
+          </Link>
+        </div>
+
       </div>
     </div>
   );
 }
+

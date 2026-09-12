@@ -11,6 +11,7 @@ import {
   getUsers,
   createUser,
 } from "../lib/api";
+import { Users, UserPlus, Trash2, X, Plus, ShieldCheck } from "lucide-react";
 
 interface MemberListProps {
   projectId: number;
@@ -26,19 +27,47 @@ const ROLES: { value: ProjectRole; label: string }[] = [
   { value: "ADMIN", label: "Admin" },
 ];
 
-export const roleColors: Record<ProjectRole, { bg: string; text: string; border: string }> = {
-  PROJECT_MANAGER: { bg: "bg-blue-900/30", text: "text-blue-400", border: "border-blue-500/30" },
-  SITE_SUPERVISOR: { bg: "bg-emerald-900/30", text: "text-emerald-400", border: "border-emerald-500/30" },
-  SAFETY_OFFICER: { bg: "bg-amber-900/30", text: "text-amber-400", border: "border-amber-500/30" },
-  CONTRACTOR: { bg: "bg-purple-900/30", text: "text-purple-400", border: "border-purple-500/30" },
-  ADMIN: { bg: "bg-rose-900/30", text: "text-rose-400", border: "border-rose-500/30" },
+export const roleColors: Record<
+  ProjectRole,
+  { bg: string; text: string; border: string }
+> = {
+  PROJECT_MANAGER: {
+    bg: "bg-blue-50",
+    text: "text-blue-800",
+    border: "border-blue-200",
+  },
+  SITE_SUPERVISOR: {
+    bg: "bg-emerald-50",
+    text: "text-emerald-800",
+    border: "border-emerald-200",
+  },
+  SAFETY_OFFICER: {
+    bg: "bg-amber-50",
+    text: "text-amber-800",
+    border: "border-amber-200",
+  },
+  CONTRACTOR: {
+    bg: "bg-purple-50",
+    text: "text-purple-800",
+    border: "border-purple-200",
+  },
+  ADMIN: {
+    bg: "bg-rose-50",
+    text: "text-rose-800",
+    border: "border-rose-200",
+  },
 };
 
-export default function MemberList({ projectId, members, onMembersChanged }: MemberListProps) {
+export default function MemberList({
+  projectId,
+  members,
+  onMembersChanged,
+}: MemberListProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<number | "">("");
-  const [selectedRole, setSelectedRole] = useState<ProjectRole>("SITE_SUPERVISOR");
+  const [selectedRole, setSelectedRole] =
+    useState<ProjectRole>("SITE_SUPERVISOR");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -129,58 +158,64 @@ export default function MemberList({ projectId, members, onMembersChanged }: Mem
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
-      <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+    <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-sm space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-4 border-b border-[#E7E5E4]">
         <div>
-          <h3 className="text-lg font-bold text-white flex items-center space-x-2">
-            <span>👥 Project Team & Members</span>
-            <span className="text-xs bg-blue-600/20 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-full">
+          <h3 className="text-lg font-bold text-[#171717] flex items-center space-x-2">
+            <Users className="w-5 h-5 text-[#F5B82E]" />
+            <span>Project Team & Members</span>
+            <span className="text-xs bg-[#F6F6F3] text-[#171717] border border-[#E7E5E4] px-2.5 py-0.5 rounded-full font-semibold">
               {members.length}
             </span>
           </h3>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Team members, site managers, and safety officers assigned to this project
+          <p className="text-xs text-[#6B7280] mt-0.5">
+            Site managers, safety officers, and team members assigned to this project
           </p>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className="px-3 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shadow-sm"
+          className="px-3.5 py-2 text-xs font-semibold bg-[#F5B82E] hover:bg-[#e0a724] text-[#0B0F10] rounded-xl transition-all shadow-xs flex items-center space-x-1.5"
         >
-          {showAddForm ? "Close Form" : "+ Add Member"}
+          <UserPlus className="w-4 h-4 stroke-[2.5]" />
+          <span>{showAddForm ? "Close Form" : "+ Add Member"}</span>
         </button>
       </div>
 
+      {/* Add Member Form */}
       {showAddForm && (
         <form
           onSubmit={handleAddMember}
-          className="bg-slate-950 p-4 rounded-xl border border-slate-800 mb-6 space-y-4"
+          className="bg-[#F6F6F3] p-5 rounded-2xl border border-[#E7E5E4] space-y-4 animate-in fade-in duration-200"
         >
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-white">Assign Member to Project</h4>
+            <h4 className="text-sm font-bold text-[#171717]">
+              Assign Member to Project
+            </h4>
             <button
               type="button"
               onClick={() => setShowQuickUserModal(true)}
-              className="text-xs text-blue-400 hover:underline"
+              className="text-xs font-semibold text-[#171717] hover:text-[#F5B82E] underline"
             >
               + Register New User
             </button>
           </div>
 
           {error && (
-            <div className="p-2 bg-rose-900/30 border border-rose-800 text-rose-300 text-xs rounded">
+            <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl">
               {error}
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-[#171717] mb-1">
                 Select User *
               </label>
               <select
                 value={selectedUserId}
                 onChange={(e) => setSelectedUserId(Number(e.target.value))}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
                 required
               >
                 {users.length === 0 && <option value="">No users found</option>}
@@ -192,13 +227,15 @@ export default function MemberList({ projectId, members, onMembersChanged }: Mem
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1">
+              <label className="block text-xs font-semibold text-[#171717] mb-1">
                 Project Role *
               </label>
               <select
                 value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as ProjectRole)}
-                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                onChange={(e) =>
+                  setSelectedRole(e.target.value as ProjectRole)
+                }
+                className="w-full bg-white border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
               >
                 {ROLES.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -209,18 +246,18 @@ export default function MemberList({ projectId, members, onMembersChanged }: Mem
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-1">
             <button
               type="button"
               onClick={() => setShowAddForm(false)}
-              className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+              className="px-3.5 py-1.5 text-xs text-[#6B7280] hover:text-[#171717]"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading || !selectedUserId}
-              className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded-lg text-xs font-semibold transition-colors"
+              className="px-4 py-2 bg-[#F5B82E] hover:bg-[#e0a724] disabled:opacity-50 text-[#0B0F10] rounded-xl text-xs font-bold transition-all shadow-xs"
             >
               {loading ? "Adding..." : "Add to Project"}
             </button>
@@ -228,55 +265,73 @@ export default function MemberList({ projectId, members, onMembersChanged }: Mem
         </form>
       )}
 
-      {/* Quick User Modal */}
+      {/* Register New User Quick Modal */}
       {showQuickUserModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-sm w-full p-6 space-y-4">
-            <h4 className="text-base font-bold text-white">Create New User Account</h4>
+        <div className="fixed inset-0 bg-[#0B0F10]/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white border border-[#E7E5E4] rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#E7E5E4] pb-3">
+              <h4 className="text-base font-bold text-[#171717]">
+                Create User Account
+              </h4>
+              <button
+                onClick={() => setShowQuickUserModal(false)}
+                className="text-[#6B7280] hover:text-[#171717]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-slate-300 mb-1">Full Name *</label>
+                <label className="block text-xs font-semibold text-[#171717] mb-1">
+                  Full Name *
+                </label>
                 <input
                   type="text"
                   value={newUserName}
                   onChange={(e) => setNewUserName(e.target.value)}
                   placeholder="e.g. Ramesh Kumar"
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-xs text-white"
+                  className="w-full bg-[#F6F6F3] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-300 mb-1">Email *</label>
+                <label className="block text-xs font-semibold text-[#171717] mb-1">
+                  Email *
+                </label>
                 <input
                   type="email"
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
                   placeholder="e.g. ramesh@example.com"
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-xs text-white"
+                  className="w-full bg-[#F6F6F3] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-300 mb-1">System Role</label>
+                <label className="block text-xs font-semibold text-[#171717] mb-1">
+                  System Role
+                </label>
                 <input
                   type="text"
                   value={newUserRole}
                   onChange={(e) => setNewUserRole(e.target.value)}
                   placeholder="e.g. ENGINEER, WORKER"
-                  className="w-full bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-xs text-white"
+                  className="w-full bg-[#F6F6F3] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs text-[#171717] focus:outline-none focus:border-[#F5B82E]"
                 />
               </div>
             </div>
-            <div className="flex justify-end space-x-2 pt-2">
+
+            <div className="flex justify-end space-x-2 pt-2 border-t border-[#E7E5E4]">
               <button
                 type="button"
                 onClick={() => setShowQuickUserModal(false)}
-                className="px-3 py-1 text-xs text-slate-400"
+                className="px-3 py-1.5 text-xs text-[#6B7280]"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleCreateQuickUser}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold"
+                className="px-4 py-2 bg-[#F5B82E] hover:bg-[#e0a724] text-[#0B0F10] rounded-xl text-xs font-bold transition-all shadow-xs"
               >
                 Create User
               </button>
@@ -285,39 +340,55 @@ export default function MemberList({ projectId, members, onMembersChanged }: Mem
         </div>
       )}
 
+      {/* Members List or Compact Empty State */}
       {members.length === 0 ? (
-        <div className="text-center py-8 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
-          <p className="text-slate-400 text-sm">No members assigned to this project yet.</p>
+        <div className="bg-[#F6F6F3]/60 border border-[#E7E5E4] rounded-2xl p-6 text-center space-y-3 my-2">
+          <div className="w-12 h-12 bg-amber-50 text-[#F5B82E] border border-amber-200/60 rounded-2xl flex items-center justify-center mx-auto shadow-xs">
+            <Users className="w-6 h-6 stroke-[2]" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-[#171717]">
+              No team members assigned
+            </h4>
+            <p className="text-xs text-[#6B7280] max-w-xs mx-auto mt-0.5">
+              Assign project members to coordinate site operations and responsibilities.
+            </p>
+          </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="mt-3 text-xs font-semibold text-blue-400 hover:text-blue-300 underline"
+            className="px-4 py-2 bg-[#F5B82E] hover:bg-[#e0a724] text-[#0B0F10] text-xs font-bold rounded-xl shadow-xs transition-all inline-flex items-center space-x-1.5"
           >
-            Assign the first team member
+            <UserPlus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Assign First Member</span>
           </button>
         </div>
       ) : (
-        <div className="divide-y divide-slate-800/80 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden">
+        <div className="divide-y divide-[#E7E5E4] bg-white rounded-2xl border border-[#E7E5E4] overflow-hidden">
           {members.map((member) => {
             const roleStyle = roleColors[member.role] || {
-              bg: "bg-slate-800",
-              text: "text-slate-300",
-              border: "border-slate-700",
+              bg: "bg-slate-100",
+              text: "text-slate-800",
+              border: "border-slate-200",
             };
 
             return (
               <div
                 key={member.id}
-                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-900/50 transition-colors"
+                className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#FAF9F6] transition-colors"
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-white font-bold text-sm">
-                    {member.user?.name ? member.user.name.charAt(0).toUpperCase() : "U"}
+                  <div className="w-10 h-10 rounded-full bg-[#F6F6F3] border border-[#E7E5E4] flex items-center justify-center text-[#171717] font-bold text-sm shadow-xs">
+                    {member.user?.name
+                      ? member.user.name.charAt(0).toUpperCase()
+                      : "U"}
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-white">
+                    <h4 className="text-sm font-bold text-[#171717]">
                       {member.user?.name || `User ID #${member.user_id}`}
                     </h4>
-                    <p className="text-xs text-slate-400">{member.user?.email || "No email"}</p>
+                    <p className="text-xs text-[#6B7280]">
+                      {member.user?.email || "No email"}
+                    </p>
                   </div>
                 </div>
 
@@ -325,12 +396,19 @@ export default function MemberList({ projectId, members, onMembersChanged }: Mem
                   <select
                     value={member.role}
                     onChange={(e) =>
-                      handleRoleChange(member.user_id, e.target.value as ProjectRole)
+                      handleRoleChange(
+                        member.user_id,
+                        e.target.value as ProjectRole
+                      )
                     }
-                    className={`text-xs font-semibold rounded-lg px-2.5 py-1 bg-slate-900 border ${roleStyle.border} ${roleStyle.text} focus:outline-none`}
+                    className={`text-xs font-semibold rounded-xl px-2.5 py-1.5 bg-[#F6F6F3] border ${roleStyle.border} ${roleStyle.text} focus:outline-none`}
                   >
                     {ROLES.map((r) => (
-                      <option key={r.value} value={r.value} className="bg-slate-900 text-white">
+                      <option
+                        key={r.value}
+                        value={r.value}
+                        className="bg-white text-[#171717]"
+                      >
                         {r.label}
                       </option>
                     ))}
@@ -340,22 +418,10 @@ export default function MemberList({ projectId, members, onMembersChanged }: Mem
                     onClick={() =>
                       handleRemoveMember(member.user_id, member.user?.name)
                     }
-                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded transition-colors"
+                    className="p-1.5 text-[#6B7280] hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                     title="Remove from project"
                   >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                      />
-                    </svg>
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
