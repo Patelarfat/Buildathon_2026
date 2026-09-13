@@ -37,7 +37,15 @@ def analyze_photo(
             detail=f"Site photo with ID {photo_id} not found."
         )
 
-    yolo = YOLOService.get_instance()
+    try:
+        yolo = YOLOService.get_instance()
+    except Exception as e:
+        logger.error(f"Failed to initialize YOLO model: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to initialize YOLO PPE vision model: {str(e)}"
+        )
+
     model_name = yolo.model_name
     model_version = yolo.model_version
 
@@ -72,13 +80,19 @@ def analyze_photo(
 
     # 3. Locate physical image file on disk
     rel_path = photo.file_path.lstrip("/").replace("/", os.sep)
-    # Could be in backend/uploads/photos/... or uploads/photos/...
-    disk_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), rel_path)
-    if not os.path.exists(disk_path):
-        # Also check relative to uploads dir directly
-        disk_path = os.path.join(UPLOAD_ROOT, os.path.basename(photo.file_path))
+    candidates = [
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), rel_path),
+        os.path.join(UPLOAD_ROOT, "photos", os.path.basename(photo.file_path)),
+        os.path.join(UPLOAD_ROOT, os.path.basename(photo.file_path)),
+        os.path.join(UPLOAD_ROOT, "ai", os.path.basename(photo.file_path)),
+    ]
+    disk_path = None
+    for cand in candidates:
+        if os.path.exists(cand):
+            disk_path = cand
+            break
 
-    if not os.path.exists(disk_path):
+    if not disk_path:
         failed_run = models.AIAnalysisRun(
             photo_id=photo.id,
             model_name=model_name,

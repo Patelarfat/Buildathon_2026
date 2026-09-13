@@ -73,22 +73,26 @@ def classify_user_intent(query: str) -> str:
     ]):
         return "OUT_OF_SCOPE"
 
-    # 1. Materials & Supply Chain
+    # 1. Recommended Actions & Role Assignments (Explicit Manager Instructions)
     if has_any([
-        "material", "materials", "shortage", "shortages", "stock", "supply",
-        "supplier", "delivery", "delayed material", "blocking work", "rebar",
-        "concrete", "cement", "steel", "aggregate", "inventory"
+        "what are the recommended actions", "recommended action", "recommended actions",
+        "what should we do", "recommendation", "recommendations", "next step", "next steps",
+        "what to do", "mitigation", "mitigations", "corrective action", "corrective actions",
+        "who should be assigned", "who should be assign", "who to assign", "assign action", "assign actions",
+        "assign", "assigned", "assignment", "assignments", "who is assigned", "who is responsible",
+        "who should handle", "responsibility", "responsible person", "responsible party", "assignee",
+        "assignees", "who should do", "who takes care of", "action owner", "action owners",
+        "task assignment", "role assignment", "assigned to these actions", "assign these actions", "who should"
     ]):
-        return "MATERIALS"
+        return "RECOMMENDED_ACTIONS"
 
-    # 2. Progress & Workforce (Daily operations)
+    # 2. Safety Incidents & Accidents
     if has_any([
-        "progress", "work completed", "work planned", "construction progress",
-        "workers", "workforce", "daily progress", "behind schedule", "daily report",
-        "today's site", "activities today", "what happened on site today", "site activity",
-        "happened on site", "today"
+        "incident", "incidents", "accident", "accidents", "unresolved incident",
+        "open incident", "safety incident", "safety incidents", "safety issue", "safety issues",
+        "near miss", "injury", "hazard", "unsafe condition"
     ]):
-        return "PROGRESS"
+        return "SAFETY_INCIDENTS"
 
     # 3. PPE & Computer Vision
     if has_any([
@@ -110,20 +114,13 @@ def classify_user_intent(query: str) -> str:
     ]):
         return "OBSERVATIONS"
 
-    # 6. Safety Incidents & Accidents
+    # 6. Materials & Supply Chain
     if has_any([
-        "incident", "incidents", "accident", "accidents", "unresolved incident",
-        "open incident", "safety incident", "near miss", "injury", "hazard", "unsafe condition"
+        "material", "materials", "shortage", "shortages", "stock", "supply",
+        "supplier", "delivery", "delayed material", "blocking work", "rebar",
+        "concrete", "cement", "steel", "aggregate", "inventory"
     ]):
-        return "SAFETY_INCIDENTS"
-
-    # 7. Recommended Actions
-    if has_any([
-        "what are the recommended actions", "recommended action", "recommended actions",
-        "what should we do", "recommendation", "recommendations", "next step", "next steps",
-        "what to do", "mitigation", "mitigations", "corrective action", "corrective actions"
-    ]):
-        return "RECOMMENDED_ACTIONS"
+        return "MATERIALS"
 
     # 8. Area & Spatial Intelligence
     if has_any([
@@ -160,6 +157,8 @@ def _parse_time_intent(query: str) -> Optional[Tuple[datetime, Optional[datetime
         return (today_start - timedelta(days=7), None)
     if "last week" in q:
         return (today_start - timedelta(days=14), today_start - timedelta(days=7))
+    if "two weeks" in q or "last 2 weeks" in q or "past 2 weeks" in q or "14 days" in q:
+        return (today_start - timedelta(days=14), None)
     if "this month" in q or "last 30 days" in q:
         return (today_start - timedelta(days=30), None)
     return None
@@ -356,6 +355,13 @@ def retrieve_assistant_context(
                 data_used.append("inspections")
             if insp_bullets:
                 context_sections.append("FAILED INSPECTIONS (SQL):\n" + "\n".join(insp_bullets))
+
+        # Also load project members and roles for action assignments
+        if intent == "RECOMMENDED_ACTIONS":
+            team_members = db.query(models.ProjectMember).join(models.User).filter(models.ProjectMember.project_id == project_id).all()
+            if team_members:
+                team_lines = [f"- {pm.user.name} ({pm.role.replace('_', ' ').title()})" for pm in team_members]
+                context_sections.append("PROJECT TEAM MEMBERS & ROLES (SQL):\n" + "\n".join(team_lines))
 
     # C. INSPECTIONS QUERY
     elif intent == "INSPECTIONS":

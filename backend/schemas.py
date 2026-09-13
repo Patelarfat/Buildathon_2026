@@ -303,6 +303,7 @@ class DailyReportResponse(DailyReportBase):
 
 
 # --- 3. Safety Incidents ---
+# --- 3. Safety Incidents ---
 VALID_INCIDENT_TYPES = {
     "PPE_VIOLATION",
     "FALL",
@@ -312,6 +313,55 @@ VALID_INCIDENT_TYPES = {
     "UNSAFE_CONDITION",
     "OTHER"
 }
+
+INCIDENT_TYPE_MAP = {
+    "PPE_VIOLATION": "PPE_VIOLATION",
+    "PPE VIOLATION": "PPE_VIOLATION",
+    "FALL": "FALL",
+    "FALL_HAZARD": "FALL",
+    "FALL HAZARD": "FALL",
+    "SLIP_TRIP": "FALL",
+    "SLIP TRIP": "FALL",
+    "SLIP": "FALL",
+    "TRIP": "FALL",
+    "INJURY": "INJURY",
+    "WORKER_INJURY": "INJURY",
+    "EQUIPMENT_ACCIDENT": "EQUIPMENT_ACCIDENT",
+    "EQUIPMENT ACCIDENT": "EQUIPMENT_ACCIDENT",
+    "EQUIPMENT_FAILURE": "EQUIPMENT_ACCIDENT",
+    "EQUIPMENT FAILURE": "EQUIPMENT_ACCIDENT",
+    "UNSAFE_BEHAVIOR": "UNSAFE_BEHAVIOR",
+    "UNSAFE BEHAVIOR": "UNSAFE_BEHAVIOR",
+    "UNSAFE_CONDITION": "UNSAFE_CONDITION",
+    "UNSAFE CONDITION": "UNSAFE_CONDITION",
+    "COLLAPSE": "UNSAFE_CONDITION",
+    "NEAR_MISS": "UNSAFE_CONDITION",
+    "NEAR MISS": "UNSAFE_CONDITION",
+    "HAZARD": "UNSAFE_CONDITION",
+    "OTHER": "OTHER"
+}
+
+def normalize_incident_type(v: Optional[str]) -> str:
+    if not v:
+        return "OTHER"
+    cleaned = v.strip().upper().replace("-", "_")
+    if cleaned in INCIDENT_TYPE_MAP:
+        return INCIDENT_TYPE_MAP[cleaned]
+    if cleaned in VALID_INCIDENT_TYPES:
+        return cleaned
+    if "FALL" in cleaned or "SLIP" in cleaned or "TRIP" in cleaned:
+        return "FALL"
+    if "EQUIP" in cleaned or "MACHIN" in cleaned:
+        return "EQUIPMENT_ACCIDENT"
+    if "PPE" in cleaned or "HELMET" in cleaned or "VEST" in cleaned:
+        return "PPE_VIOLATION"
+    if "INJUR" in cleaned:
+        return "INJURY"
+    if "BEHAV" in cleaned:
+        return "UNSAFE_BEHAVIOR"
+    if "COND" in cleaned or "HAZARD" in cleaned or "COLLAPSE" in cleaned or "MISS" in cleaned:
+        return "UNSAFE_CONDITION"
+    return "OTHER"
 
 VALID_SEVERITIES = {
     "LOW",
@@ -342,24 +392,21 @@ class SafetyIncidentBase(BaseModel):
 
     @field_validator("incident_type")
     def validate_type(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_INCIDENT_TYPES:
-            raise ValueError(f"Incident type must be one of: {', '.join(sorted(VALID_INCIDENT_TYPES))}")
-        return v_upper
+        return normalize_incident_type(v)
 
     @field_validator("severity")
     def validate_severity(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_SEVERITIES:
-            raise ValueError(f"Severity must be one of: {', '.join(sorted(VALID_SEVERITIES))}")
-        return v_upper
+        v_upper = v.upper().strip() if v else "MEDIUM"
+        if v_upper in VALID_SEVERITIES:
+            return v_upper
+        return "MEDIUM"
 
     @field_validator("status")
     def validate_status(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_INCIDENT_STATUSES:
-            raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_INCIDENT_STATUSES))}")
-        return v_upper
+        v_upper = v.upper().strip().replace(" ", "_") if v else "OPEN"
+        if v_upper in VALID_INCIDENT_STATUSES:
+            return v_upper
+        return "OPEN"
 
 
 class SafetyIncidentCreate(SafetyIncidentBase):
@@ -380,28 +427,25 @@ class SafetyIncidentUpdate(BaseModel):
     def validate_type(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        v_upper = v.upper()
-        if v_upper not in VALID_INCIDENT_TYPES:
-            raise ValueError(f"Incident type must be one of: {', '.join(sorted(VALID_INCIDENT_TYPES))}")
-        return v_upper
+        return normalize_incident_type(v)
 
     @field_validator("severity")
     def validate_severity(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        v_upper = v.upper()
-        if v_upper not in VALID_SEVERITIES:
-            raise ValueError(f"Severity must be one of: {', '.join(sorted(VALID_SEVERITIES))}")
-        return v_upper
+        v_upper = v.upper().strip()
+        if v_upper in VALID_SEVERITIES:
+            return v_upper
+        return "MEDIUM"
 
     @field_validator("status")
     def validate_status(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        v_upper = v.upper()
-        if v_upper not in VALID_INCIDENT_STATUSES:
-            raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_INCIDENT_STATUSES))}")
-        return v_upper
+        v_upper = v.upper().strip().replace(" ", "_")
+        if v_upper in VALID_INCIDENT_STATUSES:
+            return v_upper
+        return "OPEN"
 
 
 class SafetyIncidentResponse(SafetyIncidentBase):
@@ -425,6 +469,22 @@ VALID_INSPECTION_TYPES = {
     "GENERAL"
 }
 
+def normalize_inspection_type(v: Optional[str]) -> str:
+    if not v:
+        return "GENERAL"
+    cleaned = v.strip().upper().replace("-", "_")
+    if cleaned in VALID_INSPECTION_TYPES:
+        return cleaned
+    if "STRUCT" in cleaned or "SAFETY" in cleaned or "PPE" in cleaned:
+        return "SAFETY"
+    if "QUAL" in cleaned:
+        return "QUALITY"
+    if "EQUIP" in cleaned or "MACHIN" in cleaned:
+        return "EQUIPMENT"
+    if "ENV" in cleaned or "HOUSEKEEP" in cleaned:
+        return "ENVIRONMENTAL"
+    return "GENERAL"
+
 VALID_INSPECTION_STATUSES = {
     "OPEN",
     "PASSED",
@@ -447,17 +507,14 @@ class InspectionReportBase(BaseModel):
 
     @field_validator("inspection_type")
     def validate_type(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_INSPECTION_TYPES:
-            raise ValueError(f"Inspection type must be one of: {', '.join(sorted(VALID_INSPECTION_TYPES))}")
-        return v_upper
+        return normalize_inspection_type(v)
 
     @field_validator("status")
     def validate_status(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_INSPECTION_STATUSES:
-            raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_INSPECTION_STATUSES))}")
-        return v_upper
+        v_upper = v.upper().strip().replace(" ", "_") if v else "OPEN"
+        if v_upper in VALID_INSPECTION_STATUSES:
+            return v_upper
+        return "OPEN"
 
 
 class InspectionReportCreate(InspectionReportBase):
@@ -477,19 +534,16 @@ class InspectionReportUpdate(BaseModel):
     def validate_type(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        v_upper = v.upper()
-        if v_upper not in VALID_INSPECTION_TYPES:
-            raise ValueError(f"Inspection type must be one of: {', '.join(sorted(VALID_INSPECTION_TYPES))}")
-        return v_upper
+        return normalize_inspection_type(v)
 
     @field_validator("status")
     def validate_status(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        v_upper = v.upper()
-        if v_upper not in VALID_INSPECTION_STATUSES:
-            raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_INSPECTION_STATUSES))}")
-        return v_upper
+        v_upper = v.upper().strip().replace(" ", "_")
+        if v_upper in VALID_INSPECTION_STATUSES:
+            return v_upper
+        return "OPEN"
 
 
 class InspectionReportResponse(InspectionReportBase):
@@ -513,6 +567,24 @@ VALID_OBSERVATION_TYPES = {
     "EQUIPMENT",
     "GENERAL"
 }
+
+def normalize_observation_type(v: Optional[str]) -> str:
+    if not v:
+        return "GENERAL"
+    cleaned = v.strip().upper().replace("-", "_")
+    if cleaned in VALID_OBSERVATION_TYPES:
+        return cleaned
+    if "SAFE" in cleaned:
+        return "SAFETY"
+    if "QUAL" in cleaned:
+        return "QUALITY"
+    if "MAT" in cleaned or "STOR" in cleaned:
+        return "MATERIAL"
+    if "EQUIP" in cleaned:
+        return "EQUIPMENT"
+    if "PROG" in cleaned:
+        return "PROGRESS"
+    return "GENERAL"
 
 VALID_PRIORITIES = {
     "LOW",
@@ -543,24 +615,21 @@ class ObservationBase(BaseModel):
 
     @field_validator("observation_type")
     def validate_type(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_OBSERVATION_TYPES:
-            raise ValueError(f"Observation type must be one of: {', '.join(sorted(VALID_OBSERVATION_TYPES))}")
-        return v_upper
+        return normalize_observation_type(v)
 
     @field_validator("priority")
     def validate_priority(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_PRIORITIES:
-            raise ValueError(f"Priority must be one of: {', '.join(sorted(VALID_PRIORITIES))}")
-        return v_upper
+        v_upper = v.upper().strip() if v else "MEDIUM"
+        if v_upper in VALID_PRIORITIES:
+            return v_upper
+        return "MEDIUM"
 
     @field_validator("status")
     def validate_status(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_OBSERVATION_STATUSES:
-            raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_OBSERVATION_STATUSES))}")
-        return v_upper
+        v_upper = v.upper().strip().replace(" ", "_") if v else "OPEN"
+        if v_upper in VALID_OBSERVATION_STATUSES:
+            return v_upper
+        return "OPEN"
 
 
 class ObservationCreate(ObservationBase):
@@ -582,28 +651,25 @@ class ObservationUpdate(BaseModel):
     def validate_type(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        v_upper = v.upper()
-        if v_upper not in VALID_OBSERVATION_TYPES:
-            raise ValueError(f"Observation type must be one of: {', '.join(sorted(VALID_OBSERVATION_TYPES))}")
-        return v_upper
+        return normalize_observation_type(v)
 
     @field_validator("priority")
     def validate_priority(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        v_upper = v.upper()
-        if v_upper not in VALID_PRIORITIES:
-            raise ValueError(f"Priority must be one of: {', '.join(sorted(VALID_PRIORITIES))}")
-        return v_upper
+        v_upper = v.upper().strip()
+        if v_upper in VALID_PRIORITIES:
+            return v_upper
+        return "MEDIUM"
 
     @field_validator("status")
     def validate_status(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
             return v
-        v_upper = v.upper()
-        if v_upper not in VALID_OBSERVATION_STATUSES:
-            raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_OBSERVATION_STATUSES))}")
-        return v_upper
+        v_upper = v.upper().strip().replace(" ", "_")
+        if v_upper in VALID_OBSERVATION_STATUSES:
+            return v_upper
+        return "OPEN"
 
 
 class ObservationResponse(ObservationBase):
@@ -624,8 +690,28 @@ VALID_MATERIAL_STATUSES = {
     "ORDERED",
     "DELIVERED",
     "IN_USE",
-    "LOW_STOCK"
+    "LOW_STOCK",
+    "OUT_OF_STOCK",
+    "AVAILABLE",
+    "DELAYED",
+    "SHORTAGE"
 }
+
+def normalize_material_status(v: Optional[str]) -> str:
+    if not v:
+        return "ORDERED"
+    cleaned = v.strip().upper().replace("-", "_").replace(" ", "_")
+    if cleaned in VALID_MATERIAL_STATUSES:
+        return cleaned
+    if "SHORT" in cleaned or "OUT" in cleaned:
+        return "LOW_STOCK"
+    if "DELAY" in cleaned:
+        return "ORDERED"
+    if "AVAIL" in cleaned or "DELIV" in cleaned:
+        return "DELIVERED"
+    if "USE" in cleaned:
+        return "IN_USE"
+    return "ORDERED"
 
 
 class MaterialBase(BaseModel):
@@ -644,10 +730,7 @@ class MaterialBase(BaseModel):
 
     @field_validator("status")
     def validate_status(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_MATERIAL_STATUSES:
-            raise ValueError(f"Status must be one of: {', '.join(sorted(VALID_MATERIAL_STATUSES))}")
-        return v_upper
+        return normalize_material_status(v)
 
 
 class MaterialCreate(MaterialBase):
@@ -667,6 +750,9 @@ class MaterialUpdate(BaseModel):
 
     @field_validator("status")
     def validate_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        return normalize_material_status(v)
         if v is None:
             return v
         v_upper = v.upper()
@@ -1113,6 +1199,9 @@ class AssistantActionItem(BaseModel):
     priority: str = "STANDARD"
     category: Optional[str] = None
     role: Optional[str] = None
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    link: Optional[str] = None
 
 
 class AssistantMaterialItem(BaseModel):

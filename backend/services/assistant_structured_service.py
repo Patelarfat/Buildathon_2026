@@ -50,30 +50,27 @@ def build_structured_assistant_response(
     if not clean_factors:
         clean_factors = ["All site metrics within normal operating safety parameters."]
 
-    # 3. Fetch Database Entities
-    incidents = (
-        db.query(models.SafetyIncident)
-        .filter(models.SafetyIncident.project_id == project_id)
-        .order_by(models.SafetyIncident.id.desc())
-        .limit(10)
-        .all()
-    )
+    # 3. Resolve Scoped Area Entity for Targeted Search Queries
+    query_lower = query.lower()
+    project_areas = db.query(models.Area).join(models.Site).filter(models.Site.project_id == project_id).all()
+    matched_area_ids = [a.id for a in project_areas if a.name.lower() in query_lower]
+    matched_area_names = [a.name for a in project_areas if a.name.lower() in query_lower]
 
-    inspections = (
-        db.query(models.InspectionReport)
-        .filter(models.InspectionReport.project_id == project_id)
-        .order_by(models.InspectionReport.id.desc())
-        .limit(10)
-        .all()
-    )
+    # 4. Fetch Database Entities (Scoped to Area when requested)
+    inc_query = db.query(models.SafetyIncident).filter(models.SafetyIncident.project_id == project_id)
+    if matched_area_ids:
+        inc_query = inc_query.filter(models.SafetyIncident.area_id.in_(matched_area_ids))
+    incidents = inc_query.order_by(models.SafetyIncident.id.desc()).limit(10).all()
 
-    observations = (
-        db.query(models.Observation)
-        .filter(models.Observation.project_id == project_id)
-        .order_by(models.Observation.id.desc())
-        .limit(10)
-        .all()
-    )
+    insp_query = db.query(models.InspectionReport).filter(models.InspectionReport.project_id == project_id)
+    if matched_area_ids:
+        insp_query = insp_query.filter(models.InspectionReport.area_id.in_(matched_area_ids))
+    inspections = insp_query.order_by(models.InspectionReport.id.desc()).limit(10).all()
+
+    obs_query = db.query(models.Observation).filter(models.Observation.project_id == project_id)
+    if matched_area_ids:
+        obs_query = obs_query.filter(models.Observation.area_id.in_(matched_area_ids))
+    observations = obs_query.order_by(models.Observation.id.desc()).limit(10).all()
 
     materials = (
         db.query(models.Material)
@@ -110,6 +107,30 @@ def build_structured_assistant_response(
 
     total_ppe = ai_violations_count + ai_compliance_count
     ppe_pct = round((ai_compliance_count / total_ppe * 100), 1) if total_ppe > 0 else 100.0
+
+    # Team Members & Roles for Assignee Resolution
+    team_members = (
+        db.query(models.ProjectMember)
+        .join(models.User)
+        .filter(models.ProjectMember.project_id == project_id)
+        .all()
+    )
+    role_map = {}
+    for pm in team_members:
+        canonical_role = (pm.role or "").upper().replace(" ", "_").strip()
+        if canonical_role not in role_map:
+            role_map[canonical_role] = pm.user.name
+
+    def get_assignee(role_key: str, default_title: str) -> str:
+        name = role_map.get(role_key)
+        if name:
+            return f"{default_title} ({name})"
+        return default_title
+
+    safety_assignee = get_assignee("SAFETY_OFFICER", "Safety Officer")
+    supervisor_assignee = get_assignee("SITE_SUPERVISOR", "Site Supervisor")
+    contractor_assignee = get_assignee("CONTRACTOR", "Contractor")
+    pm_assignee = get_assignee("PROJECT_MANAGER", "Project Manager")
 
     # 4. INTENT-SPECIFIC BUILDERS
 
@@ -224,7 +245,6 @@ def build_structured_assistant_response(
                 )
             )
 
-        # Incident Actions
         inc_actions: List[schemas.AssistantActionItem] = []
         open_incs = [inc for inc in incidents if inc.status in ["OPEN", "UNDER_REVIEW"]]
         for inc in open_incs:
@@ -234,7 +254,11 @@ def build_structured_assistant_response(
                     title=f"Investigate {inc.incident_type.replace('_', ' ').title()}{area_str}",
                     description=inc.action_taken or "Verify ground conditions and site safety clearance before resuming operations.",
                     priority="IMMEDIATE" if inc.severity in ["HIGH", "CRITICAL"] else "HIGH",
-                    category="Safety"
+                    category="Safety",
+                    role=safety_assignee,
+                    entity_type="INCIDENT",
+                    entity_id=inc.id,
+                    link=f"/projects/{project_id}/incidents?incidentId={inc.id}#incident-{inc.id}"
                 )
             )
         if not inc_actions:
@@ -257,14 +281,15 @@ def build_structured_assistant_response(
             for inc in incidents[:5]
         ]
 
+        area_scope_str = f" in {matched_area_names[0]}" if matched_area_names else ""
         if open_incs:
             first_inc = open_incs[0]
             area_n = first_inc.area.name if first_inc.area else "Site"
-            summary = f"Identified {len(open_incs)} open safety incident(s). Primary item: {first_inc.incident_type.replace('_', ' ').title()} #{first_inc.id} at {area_n} ({first_inc.description[:90]}...)."
+            summary = f"Identified {len(open_incs)} open safety incident(s){area_scope_str}. Primary item: {first_inc.incident_type.replace('_', ' ').title()} #{first_inc.id} at {area_n} ({first_inc.description[:90]}...)."
         elif incidents:
-            summary = f"All {len(incidents)} recorded safety incidents have been marked RESOLVED. No active unresolved incidents on site."
+            summary = f"All {len(incidents)} recorded safety incidents{area_scope_str} have been marked RESOLVED. No active unresolved incidents on site."
         else:
-            summary = "No safety incidents recorded in the project database."
+            summary = f"No safety incidents recorded{area_scope_str} in the project database."
 
         return schemas.AssistantStructuredResponse(
             query_type="SAFETY_INCIDENTS",
@@ -282,7 +307,7 @@ def build_structured_assistant_response(
         )
 
     # =========================================================================
-    # INTENT 3: RECOMMENDED ACTIONS
+    # INTENT 3: RECOMMENDED ACTIONS & ROLE ASSIGNMENTS
     # =========================================================================
     elif intent == "RECOMMENDED_ACTIONS":
         actions: List[schemas.AssistantActionItem] = []
@@ -297,7 +322,11 @@ def build_structured_assistant_response(
                         title=f"Investigate {inc.incident_type.replace('_', ' ').title()} at {area_n}",
                         description=inc.action_taken or "Verify equipment stabilization and ground safety clearance before resuming operations.",
                         priority="IMMEDIATE" if inc.severity in ["HIGH", "CRITICAL"] else "HIGH",
-                        category="Safety"
+                        category="Safety",
+                        role=safety_assignee,
+                        entity_type="INCIDENT",
+                        entity_id=inc.id,
+                        link=f"/projects/{project_id}/incidents?incidentId={inc.id}#incident-{inc.id}"
                     )
                 )
                 action_sources.append(schemas.AssistantSource(
@@ -316,7 +345,11 @@ def build_structured_assistant_response(
                         title=f"Rectify {insp.inspection_type.replace('_', ' ').title()} findings at {area_n}",
                         description=insp.recommendations or "Complete required repairs and schedule safety re-inspection.",
                         priority="HIGH",
-                        category="Quality"
+                        category="Quality",
+                        role=supervisor_assignee,
+                        entity_type="INSPECTION",
+                        entity_id=insp.id,
+                        link=f"/projects/{project_id}/inspections"
                     )
                 )
                 action_sources.append(schemas.AssistantSource(
@@ -334,7 +367,11 @@ def build_structured_assistant_response(
                         title=f"Expedite delivery of {m.material_name}",
                         description=f"Coordinate with {m.supplier or 'supplier'} to resolve delay ({m.quantity} {m.unit} needed).",
                         priority="HIGH",
-                        category="Materials"
+                        category="Materials",
+                        role=contractor_assignee,
+                        entity_type="MATERIAL",
+                        entity_id=m.id,
+                        link=f"/projects/{project_id}/materials"
                     )
                 )
                 action_sources.append(schemas.AssistantSource(
@@ -351,7 +388,10 @@ def build_structured_assistant_response(
                     title="Enforce mandatory hard hat & PPE protocols",
                     description=f"Conduct mandatory toolbox safety briefing with workers in active crane and excavation zones ({ai_violations_count} violation(s) detected).",
                     priority="HIGH",
-                    category="Safety"
+                    category="Safety",
+                    role=safety_assignee,
+                    entity_type="PPE",
+                    link=f"/projects/{project_id}/photos"
                 )
             )
 
@@ -361,11 +401,26 @@ def build_structured_assistant_response(
                     title="Maintain routine safety oversight and daily logging",
                     description="Continue scheduled daily reports and perimeter safety checks.",
                     priority="STANDARD",
-                    category="Operations"
+                    category="Operations",
+                    role=pm_assignee,
+                    link=f"/projects/{project_id}/dashboard"
                 )
             )
 
-        summary = f"Prioritized executive action plan with {len(actions)} concrete recommendation(s) based on current site safety, quality audits, and supply status."
+        # Check if user specifically asked about team assignments / roles
+        q_lower = query.lower()
+        is_assignment_query = any(w in q_lower for w in [
+            "assign", "assigned", "who should", "who to", "who is responsible", "responsibility", "owner", "assignee", "role", "roles"
+        ])
+        if is_assignment_query:
+            summary = (
+                f"Action assignments for {project_name}: Safety items assigned to {safety_assignee}, "
+                f"inspection rectifications to {supervisor_assignee}, and procurement/materials to {contractor_assignee}."
+            )
+            followups = ["What are the top safety risks?", "Which area needs attention?", "What is the material status?"]
+        else:
+            summary = f"Prioritized executive action plan with {len(actions)} concrete recommendation(s) based on current site safety, quality audits, and supply status."
+            followups = ["Who should be assigned to these actions?", "Why is the project risk medium?", "Show affected area locations"]
 
         return schemas.AssistantStructuredResponse(
             query_type="RECOMMENDED_ACTIONS",
@@ -378,8 +433,8 @@ def build_structured_assistant_response(
             progress=None,
             ppe=None,
             sources=action_sources,
-            explainability=_build_explainability("Deterministic Action Priority Engine", len(actions), risk_score, risk_level),
-            suggested_followups=["Who should be assigned to these actions?", "Why is the project risk medium?", "Show affected area locations"]
+            explainability=_build_explainability("Deterministic Action & Role Assignment Engine", len(actions), risk_score, risk_level),
+            suggested_followups=followups
         )
 
     # =========================================================================
@@ -707,12 +762,17 @@ def build_structured_assistant_response(
         risk_actions = []
         if risk_attention:
             for item in risk_attention[:2]:
+                inc_id = int(item.id) if item.id and str(item.id).isdigit() else None
                 risk_actions.append(
                     schemas.AssistantActionItem(
                         title=f"Resolve {item.title} at {item.area_name or 'site'}",
                         description=item.description or "Execute corrective mitigation to reduce overall safety risk.",
                         priority="IMMEDIATE" if item.severity in ["HIGH", "CRITICAL"] else "HIGH",
-                        category="Safety"
+                        category="Safety",
+                        role=safety_assignee,
+                        entity_type="INCIDENT",
+                        entity_id=inc_id,
+                        link=f"/projects/{project_id}/incidents?incidentId={inc_id}#incident-{inc_id}" if inc_id else f"/projects/{project_id}/incidents"
                     )
                 )
         else:

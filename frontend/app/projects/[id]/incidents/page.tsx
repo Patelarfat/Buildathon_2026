@@ -71,6 +71,29 @@ export default function SafetyIncidentsPage({
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [severityFilter, setSeverityFilter] = useState<string>("ALL");
 
+  // Highlighted Incident from URL query/hash (e.g. from AI Assistant Recommended Action)
+  const [highlightedIncidentId, setHighlightedIncidentId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const checkParams = () => {
+        const params = new URLSearchParams(window.location.search);
+        const incIdParam = params.get("incidentId") || params.get("id");
+        if (incIdParam && !isNaN(Number(incIdParam))) {
+          setHighlightedIncidentId(Number(incIdParam));
+        } else if (window.location.hash.startsWith("#incident-")) {
+          const hashId = window.location.hash.replace("#incident-", "");
+          if (hashId && !isNaN(Number(hashId))) {
+            setHighlightedIncidentId(Number(hashId));
+          }
+        }
+      };
+      checkParams();
+      window.addEventListener("hashchange", checkParams);
+      return () => window.removeEventListener("hashchange", checkParams);
+    }
+  }, []);
+
   // Form State
   const [showForm, setShowForm] = useState(false);
   const [incidentDate, setIncidentDate] = useState(new Date().toISOString().slice(0, 10));
@@ -207,13 +230,32 @@ export default function SafetyIncidentsPage({
     }
   };
 
+  // Auto-scroll to highlighted incident when loaded
+  useEffect(() => {
+    if (highlightedIncidentId && !loading && incidents.length > 0) {
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`incident-${highlightedIncidentId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedIncidentId, loading, incidents]);
+
   // Incident Filtering Logic
   const filteredIncidents = incidents.filter((inc) => {
+    // Always preserve the targeted action item so it is never hidden by filters
+    if (highlightedIncidentId && inc.id === highlightedIncidentId) {
+      return true;
+    }
+
     const matchesSearch =
       searchQuery === "" ||
       inc.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       inc.incident_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inc.site?.name.toLowerCase().includes(searchQuery.toLowerCase());
+      (inc.area?.name && inc.area.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (inc.site?.name && inc.site.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesStatus = statusFilter === "ALL" || inc.status === statusFilter;
     const matchesSeverity = severityFilter === "ALL" || inc.severity === severityFilter;
@@ -348,7 +390,7 @@ export default function SafetyIncidentsPage({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search incidents by description, type, or site..."
+              placeholder="Search incidents by description, type, area (e.g. 'Podium Level 1'), or site..."
               className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-lg pl-9 pr-3 py-1.5 text-xs text-[#171717] placeholder-slate-400 focus:outline-none focus:border-[#F5B82E]"
             />
           </div>
@@ -618,13 +660,34 @@ export default function SafetyIncidentsPage({
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredIncidents.map((inc) => (
-              <div
-                key={inc.id}
-                className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-xs space-y-4 hover:shadow-md transition-all duration-200"
-              >
-                {/* Header & Badges */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E7E5E4]">
+            {filteredIncidents.map((inc) => {
+              const isHighlighted = highlightedIncidentId === inc.id;
+
+              return (
+                <div
+                  key={inc.id}
+                  id={`incident-${inc.id}`}
+                  className={`rounded-2xl p-6 space-y-4 transition-all duration-300 ${
+                    isHighlighted
+                      ? "bg-amber-50/60 border-2 border-[#D99A16] shadow-xl ring-4 ring-amber-400/25"
+                      : "bg-white border border-[#E7E5E4] shadow-xs hover:shadow-md"
+                  }`}
+                >
+                  {/* AI Assistant Target Action Banner */}
+                  {isHighlighted && (
+                    <div className="flex items-center justify-between pb-3 border-b border-amber-200/80 bg-amber-100/60 -mx-6 -mt-6 p-4 rounded-t-2xl">
+                      <div className="flex items-center gap-2 text-xs font-extrabold text-amber-950">
+                        <span className="text-base">🎯</span>
+                        <span>Target Action Item from AI Assistant — Incident #{inc.id}</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-black uppercase text-amber-900 bg-amber-200 px-2.5 py-0.5 rounded-full border border-amber-300">
+                        Active Target
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Header & Badges */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E7E5E4]">
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span className={`text-[10px] uppercase px-2.5 py-1 rounded-full border ${getSeverityBadgeClass(inc.severity)}`}>
                       ● {inc.severity} SEVERITY
@@ -688,8 +751,9 @@ export default function SafetyIncidentsPage({
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
+        </div>
         )}
       </main>
     </div>

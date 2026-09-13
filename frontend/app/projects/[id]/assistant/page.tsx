@@ -39,6 +39,7 @@ import {
   Cpu,
   Layers,
   Zap,
+  Search,
 } from "lucide-react";
 
 interface Message {
@@ -53,6 +54,13 @@ interface Message {
 }
 
 const SUGGESTED_INSIGHTS = [
+  {
+    title: "🔍 Search incidents in Podium Level 1",
+    query: "Show safety incidents in Podium Level 1",
+    category: "Search & Retrieval",
+    icon: Search,
+    badgeColor: "bg-cyan-50 text-cyan-700 border-cyan-200",
+  },
   {
     title: "What are the top safety risks?",
     query: "What are the top safety risks on this project?",
@@ -501,7 +509,7 @@ export default function AssistantPage({
                   value={inputQuery}
                   onChange={(e) => setInputQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask anything about safety, risk, progress, materials, or areas..."
+                  placeholder="Search or ask anything (e.g. 'Show safety incidents in Podium Level 1')..."
                   disabled={isLoading}
                   className="flex-1 bg-white text-[#171717] placeholder-slate-400 text-xs sm:text-sm px-4 py-3 rounded-xl border border-[#D6D3D1] focus:outline-none focus:border-[#F5B82E] resize-none min-h-[46px] max-h-[120px] shadow-xs"
                 />

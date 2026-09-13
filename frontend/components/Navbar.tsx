@@ -15,19 +15,52 @@ export default function Navbar() {
 
   const isHomePage = pathname === "/";
 
+  // Derive current active project ID from URL if inside a project route
+  const projectMatch = pathname ? pathname.match(/^\/projects\/(\d+)/) : null;
+  const currentProjectId = projectMatch ? projectMatch[1] : null;
+
+  // Persist current project ID in localStorage for top navbar context persistence
+  useEffect(() => {
+    if (currentProjectId && typeof window !== "undefined") {
+      try {
+        localStorage.setItem("cs_last_project_id", currentProjectId);
+      } catch {
+        // ignore
+      }
+    }
+  }, [currentProjectId]);
+
   useEffect(() => {
     getHealth()
       .then((data) => setHealthy(data.status === "healthy"))
       .catch(() => setHealthy(false));
   }, []);
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (href.startsWith("#")) {
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, link: { name: string; href: string }) => {
+    if (link.name === "AI Assistant") {
+      e.preventDefault();
+      let targetPid = currentProjectId;
+      if (!targetPid && typeof window !== "undefined") {
+        try {
+          targetPid = localStorage.getItem("cs_last_project_id");
+        } catch {
+          // ignore
+        }
+      }
+      if (targetPid) {
+        router.push(`/projects/${targetPid}/assistant`);
+      } else {
+        router.push("/projects");
+      }
+      return;
+    }
+
+    if (link.href.startsWith("#")) {
       e.preventDefault();
       if (!isHomePage) {
-        router.push("/" + href);
+        router.push("/" + link.href);
       } else {
-        const el = document.querySelector(href);
+        const el = document.querySelector(link.href);
         if (el) {
           el.scrollIntoView({ behavior: "smooth" });
         }
@@ -35,10 +68,17 @@ export default function Navbar() {
     }
   };
 
+  const isAssistantActive = pathname ? pathname.includes("/assistant") : false;
+  const isProjectsActive = pathname ? (pathname === "/projects" || (pathname.startsWith("/projects") && !isAssistantActive)) : false;
+
   const navLinks = [
-    { name: "Projects", href: "/projects" },
-    { name: "Insights", href: "#insights" },
-    { name: "AI Assistant", href: "#ai-assistant" },
+    { name: "Projects", href: "/projects", isActive: isProjectsActive },
+    { name: "Insights", href: "#insights", isActive: false },
+    {
+      name: "AI Assistant",
+      href: currentProjectId ? `/projects/${currentProjectId}/assistant` : "/projects",
+      isActive: isAssistantActive,
+    },
   ];
 
   return (
@@ -64,13 +104,12 @@ export default function Navbar() {
           {/* Nav Links */}
           <nav className="hidden md:flex items-center space-x-6">
             {navLinks.map((link) => {
-              const isActive =
-                link.href === "/projects" && pathname.startsWith("/projects");
+              const isActive = link.isActive;
               return (
                 <Link
                   key={link.name}
                   href={link.href}
-                  onClick={(e) => handleNavClick(e, link.href)}
+                  onClick={(e) => handleNavClick(e, link)}
                   className={`text-xs sm:text-sm transition-all py-1 relative ${
                     isActive
                       ? "text-white font-semibold after:absolute after:-bottom-1 after:left-0 after:right-0 after:h-[2px] after:bg-[#F5B82E] after:rounded-full"

@@ -260,6 +260,7 @@ export default function ObservationsPage({
       const matchDesc = obs.description.toLowerCase().includes(q);
       const matchType = obs.observation_type.toLowerCase().includes(q);
       const matchSite = obs.site?.name?.toLowerCase().includes(q);
+      const matchArea = obs.area?.name?.toLowerCase().includes(q);
       const matchCreator = obs.creator?.name?.toLowerCase().includes(q);
       const matchAssignee = obs.assignee?.name?.toLowerCase().includes(q);
       return (
@@ -267,6 +268,7 @@ export default function ObservationsPage({
         matchDesc ||
         matchType ||
         matchSite ||
+        matchArea ||
         matchCreator ||
         matchAssignee
       );

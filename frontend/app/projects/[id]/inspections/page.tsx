@@ -239,10 +239,11 @@ export default function InspectionsPage({
       const matchFindings = insp.findings?.toLowerCase().includes(q);
       const matchRecs = insp.recommendations?.toLowerCase().includes(q);
       const matchSite = insp.site?.name?.toLowerCase().includes(q);
+      const matchArea = insp.area?.name?.toLowerCase().includes(q);
       const matchInspector = insp.inspector?.name?.toLowerCase().includes(q);
       const matchType = insp.inspection_type?.toLowerCase().includes(q);
       return (
-        matchFindings || matchRecs || matchSite || matchInspector || matchType
+        matchFindings || matchRecs || matchSite || matchArea || matchInspector || matchType
       );
     }
     return true;

@@ -920,6 +920,9 @@ export interface AssistantActionItem {
   priority: string;
   category?: string | null;
   role?: string | null;
+  entity_type?: string | null;
+  entity_id?: number | null;
+  link?: string | null;
 }
 
 export interface AssistantMaterialItem {
