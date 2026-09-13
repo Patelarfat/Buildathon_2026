@@ -139,6 +139,33 @@ def get_photo(photo_id: int, db: Session = Depends(get_db)):
     return photo
 
 
+@router.get("/api/photos/{photo_id}/image")
+def get_photo_image(photo_id: int, db: Session = Depends(get_db)):
+    from fastapi.responses import FileResponse
+    photo = db.query(models.SitePhoto).filter(models.SitePhoto.id == photo_id).first()
+    if not photo or not photo.file_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Photo {photo_id} not found")
+    
+    clean_path = photo.file_path.lstrip("/")
+    base_uploads = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+    
+    if clean_path.startswith("uploads/"):
+        disk_path = os.path.join(os.path.dirname(base_uploads), clean_path)
+    else:
+        disk_path = os.path.join(base_uploads, clean_path)
+        
+    if os.path.exists(disk_path) and os.path.isfile(disk_path):
+        return FileResponse(disk_path)
+        
+    # Check photos directory fallback
+    alt_path = os.path.join(base_uploads, "photos", os.path.basename(clean_path))
+    if os.path.exists(alt_path) and os.path.isfile(alt_path):
+        return FileResponse(alt_path)
+
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Photo file for {photo_id} not found on disk")
+
+
+
 @router.delete("/api/photos/{photo_id}", status_code=status.HTTP_200_OK)
 def delete_photo(photo_id: int, db: Session = Depends(get_db)):
     photo = db.query(models.SitePhoto).filter(models.SitePhoto.id == photo_id).first()

@@ -1,5 +1,15 @@
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+export function getPhotoImageUrl(urlOrPath?: string | null): string {
+  if (!urlOrPath) return "";
+  if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://") || urlOrPath.startsWith("data:")) {
+    return urlOrPath;
+  }
+  const cleanPath = urlOrPath.startsWith("/") ? urlOrPath : `/${urlOrPath}`;
+  return `${API_BASE}${cleanPath}`;
+}
+
+
 // --- Types ---
 export type ProjectStatus = "PLANNING" | "ACTIVE" | "ON_HOLD" | "COMPLETED";
 
@@ -501,6 +511,29 @@ export interface AISafetyFinding {
   created_at: string;
 }
 
+export interface PPEItemStatus {
+  detected: boolean;
+  confidence?: number | null;
+}
+
+export interface PersonPPEStatus {
+  person_id: number;
+  confidence: number;
+  helmet: PPEItemStatus;
+  vest: PPEItemStatus;
+  gloves: PPEItemStatus;
+  boots: PPEItemStatus;
+  violations: string[];
+  compliant: boolean;
+}
+
+export interface PPESummary {
+  workers_detected: number;
+  fully_compliant: number;
+  workers_with_violations: number;
+  overall_compliance: number;
+}
+
 export interface AIAnalysisRun {
   id: number;
   photo_id: number;
@@ -513,6 +546,8 @@ export interface AIAnalysisRun {
   created_at: string;
   detections: AIDetection[];
   safety_findings: AISafetyFinding[];
+  people?: PersonPPEStatus[];
+  summary?: PPESummary;
 }
 
 export interface AnalysisResult {
@@ -525,6 +560,163 @@ export interface AnalysisResult {
   detections: AIDetection[];
   safety_findings: AISafetyFinding[];
   annotated_image_url?: string | null;
+  people?: PersonPPEStatus[];
+  summary?: PPESummary;
+}
+
+export function computePersonPPEReport(detections: AIDetection[]): { people: PersonPPEStatus[]; summary: PPESummary } {
+  const personDets = detections
+    .filter((d) => d.class_name.toLowerCase() === "person" || d.class_name.toLowerCase() === "worker")
+    .sort((a, b) => a.x1 - b.x1);
+
+  const itemDets = detections.filter((d) => d.class_name.toLowerCase() !== "person" && d.class_name.toLowerCase() !== "worker" && d.class_name.toLowerCase() !== "none");
+
+  if (personDets.length === 0 && itemDets.length > 0) {
+    const sortedItems = [...itemDets].sort((a, b) => (a.x1 + a.x2) / 2 - (b.x1 + b.x2) / 2);
+    const clusters: AIDetection[][] = [];
+    for (const item of sortedItems) {
+      const cx = (item.x1 + item.x2) / 2;
+      const lastCluster = clusters[clusters.length - 1];
+      if (!lastCluster) {
+        clusters.push([item]);
+      } else {
+        const lastCx = (lastCluster[lastCluster.length - 1].x1 + lastCluster[lastCluster.length - 1].x2) / 2;
+        if (cx - lastCx > 150) {
+          clusters.push([item]);
+        } else {
+          lastCluster.push(item);
+        }
+      }
+    }
+
+    clusters.forEach((cl, idx) => {
+      const avgX = cl.reduce((sum, item) => sum + (item.x1 + item.x2) / 2, 0) / cl.length;
+      personDets.push({
+        id: -1 - idx,
+        photo_id: 0,
+        analysis_run_id: 0,
+        project_id: 0,
+        site_id: 0,
+        class_name: "person",
+        confidence: 0.9,
+        x1: Math.max(0, avgX - 100),
+        y1: 0,
+        x2: avgX + 100,
+        y2: 1000,
+        created_at: new Date().toISOString(),
+      });
+    });
+  }
+
+  const pInfo = personDets.map((p, idx) => {
+    const width = Math.max(1, p.x2 - p.x1);
+    const height = Math.max(1, p.y2 - p.y1);
+    return {
+      person_id: idx + 1,
+      confidence: p.confidence,
+      x1: p.x1,
+      y1: p.y1,
+      x2: p.x2,
+      y2: p.y2,
+      cx: (p.x1 + p.x2) / 2,
+      cy: (p.y1 + p.y2) / 2,
+      width,
+      height,
+      items: { helmet: [] as number[], vest: [] as number[], gloves: [] as number[], boots: [] as number[] },
+      negatives: { no_helmet: false, no_gloves: false, no_boots: false },
+    };
+  });
+
+  for (const item of itemDets) {
+    const cls = item.class_name.toLowerCase();
+    const icx = (item.x1 + item.x2) / 2;
+    const icy = (item.y1 + item.y2) / 2;
+    const iconf = item.confidence;
+
+    if (pInfo.length === 0) continue;
+
+    let bestP: (typeof pInfo)[0] | null = null;
+    let bestScore = -1;
+
+    for (const p of pInfo) {
+      const margin = p.width * 0.4;
+      if (icx < p.x1 - margin || icx > p.x2 + margin) continue;
+
+      const distX = Math.abs(icx - p.cx) / p.width;
+      const relY = p.height > 0 ? (icy - p.y1) / p.height : 0.5;
+
+      let verticalFit = 1.0;
+      if ((cls === "helmet" || cls === "no_helmet") && relY > 0.45) verticalFit = 0.5;
+      else if ((cls === "boots" || cls === "no_boots") && relY < 0.55) verticalFit = 0.5;
+      else if (cls === "vest" && (relY < 0.15 || relY > 0.85)) verticalFit = 0.5;
+
+      const score = (1.0 - distX) * verticalFit;
+      if (score > bestScore) {
+        bestScore = score;
+        bestP = p;
+      }
+    }
+
+    if (!bestP) {
+      bestP = pInfo.reduce((prev, curr) => (Math.abs(icx - curr.cx) < Math.abs(icx - prev.cx) ? curr : prev));
+    }
+
+    if (cls === "helmet") bestP.items.helmet.push(iconf);
+    else if (cls === "no_helmet") bestP.negatives.no_helmet = true;
+    else if (cls === "vest") bestP.items.vest.push(iconf);
+    else if (cls === "gloves") bestP.items.gloves.push(iconf);
+    else if (cls === "no_gloves") bestP.negatives.no_gloves = true;
+    else if (cls === "boots") bestP.items.boots.push(iconf);
+    else if (cls === "no_boots") bestP.negatives.no_boots = true;
+  }
+
+  const people: PersonPPEStatus[] = pInfo.map((p) => {
+    const helmetDet = p.items.helmet.length > 0 && !p.negatives.no_helmet;
+    const helmetConf = helmetDet ? Math.max(...p.items.helmet) : undefined;
+
+    const vestDet = p.items.vest.length > 0;
+    const vestConf = vestDet ? Math.max(...p.items.vest) : undefined;
+
+    const glovesDet = p.items.gloves.length > 0 && !p.negatives.no_gloves;
+    const glovesConf = glovesDet ? Math.max(...p.items.gloves) : undefined;
+
+    const bootsDet = p.items.boots.length > 0 && !p.negatives.no_boots;
+    const bootsConf = bootsDet ? Math.max(...p.items.boots) : undefined;
+
+    const violations: string[] = [];
+    if (!helmetDet) violations.push("Safety Helmet Missing");
+    if (!vestDet) violations.push("High-Visibility Vest Missing");
+    if (!glovesDet) violations.push("Protective Gloves Missing");
+    if (!bootsDet) violations.push("Safety Boots Missing");
+
+    const compliant = violations.length === 0;
+
+    return {
+      person_id: p.person_id,
+      confidence: p.confidence,
+      helmet: { detected: helmetDet, confidence: helmetConf },
+      vest: { detected: vestDet, confidence: vestConf },
+      gloves: { detected: glovesDet, confidence: glovesConf },
+      boots: { detected: bootsDet, confidence: bootsConf },
+      violations,
+      compliant,
+    };
+  });
+
+  const workersDetected = people.length;
+  const fullyCompliant = people.filter((p) => p.compliant).length;
+  const workersWithViolations = people.filter((p) => !p.compliant).length;
+  const overallCompliance = workersDetected > 0 ? Math.round((fullyCompliant / workersDetected) * 100) : 100;
+
+  return {
+    people,
+    summary: {
+      workers_detected: workersDetected,
+      fully_compliant: fullyCompliant,
+      workers_with_violations: workersWithViolations,
+      overall_compliance: overallCompliance,
+    },
+  };
 }
 
 export interface AISummary {
@@ -956,13 +1148,40 @@ export interface AssistantProgressInfo {
   blockers?: string | null;
 }
 
+export interface AssistantPPEPhotoItem {
+  photo_id: number;
+  title: string;
+  image_url?: string | null;
+  created_at?: string | null;
+  workers_count: number;
+  compliant_count: number;
+  violations_count: number;
+  compliance_pct: number;
+  missing_summary?: string | null;
+  people?: PersonPPEStatus[];
+}
+
+export interface AssistantPPEViolationTypeBreakdown {
+  item_key: string;
+  label: string;
+  count: number;
+}
+
 export interface AssistantPPEInfo {
   compliance_count: number;
   violations_count: number;
   compliance_pct: number;
+  total_workers?: number;
+  total_photos?: number;
+  photos_analyzed?: number;
+  status_level?: string;
+  insight_summary?: string | null;
+  type_breakdown?: AssistantPPEViolationTypeBreakdown[];
+  photos?: AssistantPPEPhotoItem[];
   violations_list: string[];
   compliance_items: string[];
 }
+
 
 export interface AssistantPipelineStep {
   name: string;

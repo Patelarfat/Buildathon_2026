@@ -192,12 +192,50 @@ class DocumentBuilder:
         title = f"Site Photo #{photo.id}: {photo.caption or 'Site Photograph'}"
         site_name = photo.site.name if photo.site else f"Site #{photo.site_id}"
         area_name = photo.area.name if photo.area else "Overall Site"
-        findings_count = len(photo.safety_findings) if photo.safety_findings else 0
         date_str = photo.created_at.strftime("%Y-%m-%d") if photo.created_at else "recent"
+
+        ppe_str = ""
+        latest_run = None
+        if hasattr(photo, "analysis_runs") and photo.analysis_runs:
+            completed_runs = [r for r in photo.analysis_runs if r.status == "COMPLETED"]
+            if completed_runs:
+                completed_runs.sort(key=lambda x: x.id, reverse=True)
+                latest_run = completed_runs[0]
+
+        if latest_run:
+            import json
+            from services.ppe_analyzer import build_person_ppe_report
+            people = []
+            summary = {}
+            if getattr(latest_run, "people_json", None) and getattr(latest_run, "summary_json", None):
+                try:
+                    people = json.loads(latest_run.people_json)
+                    summary = json.loads(latest_run.summary_json)
+                except Exception:
+                    pass
+            if not people or not summary:
+                dets_dicts = [
+                    {"class_name": d.class_name, "confidence": d.confidence, "x1": d.x1, "y1": d.y1, "x2": d.x2, "y2": d.y2}
+                    for d in latest_run.detections
+                ]
+                people, summary = build_person_ppe_report(dets_dicts)
+
+            workers_cnt = summary.get("workers_detected", 0)
+            comp_cnt = summary.get("fully_compliant", 0)
+            viol_cnt = summary.get("workers_with_violations", 0)
+            pct = summary.get("overall_compliance", 100.0)
+
+            viols_list = []
+            for p in people:
+                if not p.get("compliant"):
+                    viols_list.append(f"Person {p.get('person_id')}: {', '.join(p.get('violations', []))}")
+
+            viols_desc = f" Violations: {'; '.join(viols_list)}." if viols_list else " All workers fully compliant."
+            ppe_str = f" Latest PPE Analysis: {workers_cnt} workers detected ({comp_cnt} fully compliant, {viol_cnt} with safety violations, {pct}% overall compliance).{viols_desc}"
+
         text = (
             f"Site Photo #{photo.id} recorded on {date_str} at {site_name} in {area_name}. "
-            f"Caption: {photo.caption or 'Construction site photographic record'}. "
-            f"Analyzed by YOLO PPE vision model with {findings_count} safety finding(s) detected."
+            f"Caption: {photo.caption or 'Construction site photographic record'}.{ppe_str}"
         )
         metadata = {
             "project_id": photo.project_id,

@@ -21,6 +21,7 @@ from services.risk_engine import RiskEngine
 from services.recurring_issue_service import RecurringIssueService
 from services.trend_service import TrendService
 from services.ppe_constants import AI_PPE_COMPLIANCE_TYPES, AI_PPE_VIOLATION_TYPES
+from services.ppe_analyzer import get_project_ppe_summary
 from services.rag.retriever import SemanticRetriever
 
 logger = logging.getLogger(__name__)
@@ -639,23 +640,24 @@ def retrieve_assistant_context(
 
     # I. PPE QUERY
     elif intent == "PPE":
-        ai_violations_count = db.query(func.count(models.AISafetyFinding.id)).filter(
-            models.AISafetyFinding.project_id == project_id,
-            models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
-            models.AISafetyFinding.status != "FALSE_POSITIVE"
-        ).scalar() or 0
+        ppe_summary = get_project_ppe_summary(db=db, project_id=project_id, site_id=matched_site_id, area_id=matched_area_id)
+        workers_cnt = ppe_summary["workers_detected"]
+        compliant_cnt = ppe_summary["fully_compliant"]
+        violating_cnt = ppe_summary["workers_with_violations"]
+        compliance_pct = ppe_summary["overall_compliance"]
+        viols_list = ppe_summary["violations_list"]
 
-        ai_compliance_count = db.query(func.count(models.AISafetyFinding.id)).filter(
-            models.AISafetyFinding.project_id == project_id,
-            models.AISafetyFinding.finding_type.in_(AI_PPE_COMPLIANCE_TYPES)
-        ).scalar() or 0
+        viols_str = "\n".join([f"  * {v}" for v in viols_list]) if viols_list else "  * No active PPE safety violations detected across scanned workers."
 
         context_sections.append(
             f"PPE COMPUTER VISION METRICS (SQL):\n"
-            f"- PPE Compliance Findings: {ai_compliance_count} verified detections (Helmets, Vests, Boots, Goggles, Gloves)\n"
-            f"- PPE Violations: {ai_violations_count} non-compliance findings (Person without helmet / vest)"
+            f"- Total Workers Detected: {workers_cnt}\n"
+            f"- Fully Compliant Workers: {compliant_cnt}\n"
+            f"- Workers with Violations: {violating_cnt}\n"
+            f"- Overall Worker Compliance Rate: {compliance_pct}%\n"
+            f"- Specific Worker Violations:\n{viols_str}"
         )
-        add_source("PPE", "ppe_vision", "AI PPE Vision Detection", f"Compliance: {ai_compliance_count} · Violations: {ai_violations_count}")
+        add_source("PPE", "ppe_vision", "AI PPE Vision Detection", f"Workers: {workers_cnt} · Compliant: {compliant_cnt} · Violations: {violating_cnt} ({compliance_pct}%)")
         data_used.append("ppe_vision")
 
     # J. GENERAL PROJECT OVERVIEW

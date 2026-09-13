@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -9,7 +10,7 @@ from database import get_db
 import models
 import schemas
 from services.yolo_service import YOLOService
-from services.ppe_analyzer import analyze_detections
+from services.ppe_analyzer import analyze_detections, build_person_ppe_report
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +75,11 @@ def analyze_photo(
             .first()
         )
         if existing_run:
+            dets_dicts = [
+                {"class_name": d.class_name, "confidence": d.confidence, "x1": d.x1, "y1": d.y1, "x2": d.x2, "y2": d.y2}
+                for d in existing_run.detections
+            ]
+            people, summary = build_person_ppe_report(dets_dicts)
             return schemas.AnalysisResultResponse(
                 photo_id=photo.id,
                 analysis_run_id=existing_run.id,
@@ -83,7 +89,9 @@ def analyze_photo(
                 processing_time_ms=existing_run.processing_time_ms,
                 detections=existing_run.detections,
                 safety_findings=existing_run.safety_findings,
-                annotated_image_url=existing_run.annotated_file_path
+                annotated_image_url=existing_run.annotated_file_path,
+                people=people,
+                summary=summary
             )
 
     # 3. Locate physical image file on disk
@@ -204,12 +212,24 @@ def analyze_photo(
         db.add(db_finding)
         db_findings.append(db_finding)
 
-    # 8. Mark analysis COMPLETED
+    # 8. Mark analysis COMPLETED and persist person-wise PPE report
+    people, summary = build_person_ppe_report(raw_detections)
+    
     analysis_run.status = "COMPLETED"
     analysis_run.processing_time_ms = proc_time
     analysis_run.annotated_file_path = annotated_web
+    analysis_run.people_json = json.dumps(people)
+    analysis_run.summary_json = json.dumps(summary)
+    
     db.commit()
     db.refresh(analysis_run)
+
+    # 9. Trigger RAG Vector Indexing refresh for this photo analysis
+    try:
+        from services.rag.indexer import RAGIndexer
+        RAGIndexer.index_photo(db=db, photo_id=photo.id)
+    except Exception as rag_err:
+        logger.warning(f"RAG indexing after photo analysis error: {rag_err}")
 
     return schemas.AnalysisResultResponse(
         photo_id=photo.id,
@@ -220,7 +240,9 @@ def analyze_photo(
         processing_time_ms=analysis_run.processing_time_ms,
         detections=db_detections,
         safety_findings=db_findings,
-        annotated_image_url=analysis_run.annotated_file_path
+        annotated_image_url=analysis_run.annotated_file_path,
+        people=people,
+        summary=summary
     )
 
 
@@ -257,7 +279,29 @@ def get_photo_analysis(photo_id: int, db: Session = Depends(get_db)):
                 f"found for photo {photo_id}."
             )
         )
-    return run
+
+    dets_dicts = [
+        {"class_name": d.class_name, "confidence": d.confidence, "x1": d.x1, "y1": d.y1, "x2": d.x2, "y2": d.y2}
+        for d in run.detections
+    ]
+    people, summary = build_person_ppe_report(dets_dicts)
+
+    # Return response object containing people and summary
+    return schemas.AIAnalysisRunResponse(
+        id=run.id,
+        photo_id=run.photo_id,
+        model_name=run.model_name,
+        model_version=run.model_version,
+        status=run.status,
+        processing_time_ms=run.processing_time_ms,
+        error_message=run.error_message,
+        annotated_file_path=run.annotated_file_path,
+        created_at=run.created_at,
+        detections=run.detections,
+        safety_findings=run.safety_findings,
+        people=people,
+        summary=summary
+    )
 
 
 @router.get("/api/photos/{photo_id}/detections", response_model=List[schemas.AIDetectionResponse])

@@ -235,3 +235,11 @@ class RAGIndexer:
             "total_indexed": total_indexed,
             "breakdown": counts
         }
+
+    @classmethod
+    def index_photo(cls, db: Session, photo_id: int) -> Optional[models.RAGDocument]:
+        """Indexes/updates a single site photo document in RAG vector store."""
+        photo = db.query(models.SitePhoto).filter(models.SitePhoto.id == photo_id).first()
+        if not photo:
+            return None
+        return cls.index_entity(db, "PHOTO", photo)

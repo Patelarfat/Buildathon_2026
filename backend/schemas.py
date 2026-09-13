@@ -873,6 +873,29 @@ class AISafetyFindingResponse(AISafetyFindingBase):
         from_attributes = True
 
 
+class PPEItemStatus(BaseModel):
+    detected: bool
+    confidence: Optional[float] = None
+
+
+class PersonPPEStatus(BaseModel):
+    person_id: int
+    confidence: float
+    helmet: PPEItemStatus
+    vest: PPEItemStatus
+    gloves: PPEItemStatus
+    boots: PPEItemStatus
+    violations: List[str] = []
+    compliant: bool
+
+
+class PPESummary(BaseModel):
+    workers_detected: int
+    fully_compliant: int
+    workers_with_violations: int
+    overall_compliance: float
+
+
 class AIAnalysisRunResponse(BaseModel):
     id: int
     photo_id: int
@@ -885,6 +908,8 @@ class AIAnalysisRunResponse(BaseModel):
     created_at: datetime
     detections: List[AIDetectionResponse] = []
     safety_findings: List[AISafetyFindingResponse] = []
+    people: List[PersonPPEStatus] = []
+    summary: Optional[PPESummary] = None
 
     class Config:
         from_attributes = True
@@ -900,6 +925,8 @@ class AnalysisResultResponse(BaseModel):
     detections: List[AIDetectionResponse] = []
     safety_findings: List[AISafetyFindingResponse] = []
     annotated_image_url: Optional[str] = None
+    people: List[PersonPPEStatus] = []
+    summary: Optional[PPESummary] = None
 
 
 class AISummaryResponse(BaseModel):
@@ -1222,12 +1249,39 @@ class AssistantProgressInfo(BaseModel):
     blockers: Optional[str] = None
 
 
+class AssistantPPEPhotoItem(BaseModel):
+    photo_id: int
+    title: str
+    image_url: Optional[str] = None
+    created_at: Optional[str] = None
+    workers_count: int = 0
+    compliant_count: int = 0
+    violations_count: int = 0
+    compliance_pct: float = 0.0
+    missing_summary: Optional[str] = None
+    people: List[Dict[str, Any]] = []
+
+
+class AssistantPPEViolationTypeBreakdown(BaseModel):
+    item_key: str
+    label: str
+    count: int = 0
+
+
 class AssistantPPEInfo(BaseModel):
     compliance_count: int = 0
     violations_count: int = 0
     compliance_pct: float = 100.0
+    total_workers: int = 0
+    total_photos: int = 0
+    photos_analyzed: int = 0
+    status_level: str = "CRITICAL"
+    insight_summary: Optional[str] = None
+    type_breakdown: List[AssistantPPEViolationTypeBreakdown] = []
+    photos: List[AssistantPPEPhotoItem] = []
     violations_list: List[str] = []
     compliance_items: List[str] = []
+
 
 
 class AssistantPipelineStep(BaseModel):

@@ -5,6 +5,7 @@ from sqlalchemy import func
 
 import models
 from services.ppe_constants import AI_PPE_VIOLATION_TYPES, AI_PPE_COMPLIANCE_TYPES
+from services.ppe_analyzer import get_project_ppe_summary
 from services.risk_engine import RiskEngine
 from services.recurring_issue_service import RecurringIssueService
 from services.trend_service import TrendService
@@ -102,37 +103,21 @@ class IntelligenceService:
         """
         cutoff_date = datetime.utcnow() - timedelta(days=days)
 
-        # 1. AI Findings
-        ai_q = db.query(models.AISafetyFinding).filter(
-            models.AISafetyFinding.project_id == project_id,
-            models.AISafetyFinding.created_at >= cutoff_date,
-            models.AISafetyFinding.status != "FALSE_POSITIVE"
-        )
-        if site_id:
-            ai_q = ai_q.filter(models.AISafetyFinding.site_id == site_id)
-        if area_id:
-            ai_q = ai_q.filter(models.AISafetyFinding.area_id == area_id)
+        # 1. AI Findings & PPE Summary
+        ppe_summary = get_project_ppe_summary(db=db, project_id=project_id, site_id=site_id, area_id=area_id)
+        
+        ai_total = ppe_summary["workers_detected"]
+        compliant_cnt = ppe_summary["fully_compliant"]
+        ai_viol_total = ppe_summary["workers_with_violations"]
+        ai_viol_open = ai_viol_total
+        ai_open = ai_viol_total
 
-        all_ai = ai_q.all()
-        ai_total = len(all_ai)
-        ai_open = sum(1 for f in all_ai if f.status == "OPEN")
-
-        # Separate actual violations from compliant detections
-        violations_list = [f for f in all_ai if f.finding_type in AI_PPE_VIOLATION_TYPES]
-        ai_viol_total = len(violations_list)
-        ai_viol_open = sum(1 for f in violations_list if f.status == "OPEN")
-
-        # Exact PPE Breakdown for actual violations
-        no_helmet = sum(1 for f in all_ai if f.finding_type == "PERSON_WITHOUT_HELMET")
-        no_gloves = sum(1 for f in all_ai if f.finding_type == "PERSON_WITHOUT_GLOVES")
-        no_boots = sum(1 for f in all_ai if f.finding_type == "PERSON_WITHOUT_BOOTS")
-        no_goggles = sum(1 for f in all_ai if f.finding_type == "PERSON_WITHOUT_GOGGLES")
-        other_viol = sum(1 for f in all_ai if f.finding_type in AI_PPE_VIOLATION_TYPES and f.finding_type not in {
-            "PERSON_WITHOUT_HELMET", "PERSON_WITHOUT_GLOVES", "PERSON_WITHOUT_BOOTS", "PERSON_WITHOUT_GOGGLES"
-        })
-
-        # Compliant AI findings
-        compliant_cnt = sum(1 for f in all_ai if f.finding_type in AI_PPE_COMPLIANCE_TYPES or f.severity.upper() == "INFO")
+        # Breakdown of missing gear across workers
+        no_helmet = sum(1 for p in ppe_summary["people"] if not p.get("helmet", {}).get("detected"))
+        no_gloves = sum(1 for p in ppe_summary["people"] if not p.get("gloves", {}).get("detected"))
+        no_boots = sum(1 for p in ppe_summary["people"] if not p.get("boots", {}).get("detected"))
+        no_goggles = 0
+        other_viol = sum(1 for p in ppe_summary["people"] if not p.get("vest", {}).get("detected"))
 
         # 2. Human Incidents
         inc_q = db.query(models.SafetyIncident).filter(

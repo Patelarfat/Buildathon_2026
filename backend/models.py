@@ -340,6 +340,8 @@ class AIAnalysisRun(Base):
     processing_time_ms = Column(Float, nullable=True)
     error_message = Column(Text, nullable=True)
     annotated_file_path = Column(String(500), nullable=True)
+    people_json = Column(Text, nullable=True)
+    summary_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     photo = relationship("SitePhoto", back_populates="analysis_runs")

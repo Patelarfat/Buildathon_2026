@@ -1,7 +1,5 @@
-import logging
 from typing import List, Dict, Any, Optional, Tuple
-
-logger = logging.getLogger(__name__)
+import json
 
 # Official Construction-PPE dataset classes (11 classes):
 # 0 helmet, 1 gloves, 2 vest, 3 boots, 4 goggles, 5 none, 6 Person, 7 no_helmet, 8 no_goggle, 9 no_gloves, 10 no_boots
@@ -69,215 +67,6 @@ COMPLIANCE_RULES = {
     }
 }
 
-REQUIRED_PPE_CLASSES = ("helmet", "vest", "gloves", "boots", "goggles")
-
-
-def _box_intersection_ratio(box_a: Tuple[float, float, float, float], box_b: Tuple[float, float, float, float]) -> float:
-    """Calculates intersection area over box_b area."""
-    ix1 = max(box_a[0], box_b[0])
-    iy1 = max(box_a[1], box_b[1])
-    ix2 = min(box_a[2], box_b[2])
-    iy2 = min(box_a[3], box_b[3])
-    
-    inter_w = max(0.0, ix2 - ix1)
-    inter_h = max(0.0, iy2 - iy1)
-    inter_area = inter_w * inter_h
-    
-    box_b_area = max(1.0, (box_b[2] - box_b[0]) * (box_b[3] - box_b[1]))
-    return inter_area / box_b_area
-
-
-def _is_associated_with_person(ppe_det: Dict[str, Any], person_det: Dict[str, Any]) -> bool:
-    """
-    Determines if a PPE detection anatomically associates with a detected Person bounding box.
-    Uses target anatomical regions:
-    - Head/Face (upper 35%): helmet, no_helmet, goggles, no_goggle
-    - Torso (middle 20%-70%): vest
-    - Hands/Arms (sides/mid-lower): gloves, no_gloves
-    - Lower body / feet (bottom 30%): boots, no_boots
-    """
-    px1 = float(person_det.get("x1", 0))
-    py1 = float(person_det.get("y1", 0))
-    px2 = float(person_det.get("x2", 0))
-    py2 = float(person_det.get("y2", 0))
-    
-    pw = max(1.0, px2 - px1)
-    ph = max(1.0, py2 - py1)
-    
-    bx1 = float(ppe_det.get("x1", 0))
-    by1 = float(ppe_det.get("y1", 0))
-    bx2 = float(ppe_det.get("x2", 0))
-    by2 = float(ppe_det.get("y2", 0))
-    
-    ppe_box = (bx1, by1, bx2, by2)
-    person_box = (px1, py1, px2, py2)
-    
-    cx = (bx1 + bx2) / 2.0
-    cy = (by1 + by2) / 2.0
-    
-    # Check general containment in full person box
-    is_center_in_person = (px1 <= cx <= px2) and (py1 <= cy <= py2)
-    full_overlap = _box_intersection_ratio(person_box, ppe_box)
-    
-    cls_name = str(ppe_det.get("class_name", "")).lower()
-    
-    # 1. Head / Face items: helmet, no_helmet, goggles, no_goggle
-    if cls_name in ["helmet", "no_helmet", "goggles", "no_goggle"]:
-        head_region = (
-            px1 - 0.15 * pw,
-            py1 - 0.20 * ph,
-            px2 + 0.15 * pw,
-            py1 + 0.38 * ph
-        )
-        if (head_region[0] <= cx <= head_region[2]) and (head_region[1] <= cy <= head_region[3]):
-            return True
-        if _box_intersection_ratio(head_region, ppe_box) >= 0.20:
-            return True
-        # If center is in upper half of person
-        if is_center_in_person and cy <= (py1 + 0.45 * ph):
-            return True
-        return False
-        
-    # 2. Torso items: vest
-    elif cls_name in ["vest"]:
-        torso_region = (
-            px1 - 0.10 * pw,
-            py1 + 0.15 * ph,
-            px2 + 0.10 * pw,
-            py1 + 0.75 * ph
-        )
-        if (torso_region[0] <= cx <= torso_region[2]) and (torso_region[1] <= cy <= torso_region[3]):
-            return True
-        if _box_intersection_ratio(torso_region, ppe_box) >= 0.20:
-            return True
-        if is_center_in_person and (py1 + 0.10 * ph <= cy <= py1 + 0.80 * ph):
-            return True
-        return False
-        
-    # 3. Hand items: gloves, no_gloves
-    elif cls_name in ["gloves", "no_gloves"]:
-        hands_region = (
-            px1 - 0.25 * pw,
-            py1 + 0.30 * ph,
-            px2 + 0.25 * pw,
-            py1 + 0.90 * ph
-        )
-        if (hands_region[0] <= cx <= hands_region[2]) and (hands_region[1] <= cy <= hands_region[3]):
-            return True
-        if _box_intersection_ratio(hands_region, ppe_box) >= 0.15:
-            return True
-        if is_center_in_person:
-            return True
-        return False
-        
-    # 4. Feet items: boots, no_boots
-    elif cls_name in ["boots", "no_boots"]:
-        boots_region = (
-            px1 - 0.15 * pw,
-            py1 + 0.60 * ph,
-            px2 + 0.15 * pw,
-            py2 + 0.15 * ph
-        )
-        if (boots_region[0] <= cx <= boots_region[2]) and (boots_region[1] <= cy <= boots_region[3]):
-            return True
-        if _box_intersection_ratio(boots_region, ppe_box) >= 0.20:
-            return True
-        if is_center_in_person and cy >= (py1 + 0.55 * ph):
-            return True
-        return False
-        
-    # 5. none or other detections
-    else:
-        if is_center_in_person or full_overlap >= 0.25:
-            return True
-        return False
-
-
-def _review_findings_for_people(
-    detections: List[Dict[str, Any]],
-    photo_id: int,
-    analysis_run_id: int,
-    project_id: int,
-    site_id: int,
-    area_id: Optional[int],
-) -> List[Dict[str, Any]]:
-    """Create cautious review findings for PPE that was not positively detected.
-
-    Absence of a model detection is not proof that a worker is missing PPE. The
-    resulting finding is deliberately a LOW-severity human-review task, while a
-    direct no_* detection remains the only automated violation evidence.
-    """
-    people = [d for d in detections if str(d.get("class_name", "")).lower() == "person"]
-    positive_ppe = [
-        d for d in detections
-        if str(d.get("class_name", "")).lower() in REQUIRED_PPE_CLASSES
-    ]
-    direct_negative_dets = [
-        d for d in detections
-        if str(d.get("class_name", "")).lower().startswith("no_")
-    ]
-    
-    findings: List[Dict[str, Any]] = []
-
-    for worker_number, person in enumerate(people, start=1):
-        associated_positive = set()
-        associated_negative = set()
-        
-        # Check associated positive PPE
-        for item in positive_ppe:
-            if _is_associated_with_person(item, person):
-                associated_positive.add(str(item["class_name"]).lower())
-                
-        # Check associated direct negative PPE
-        for item in direct_negative_dets:
-            if _is_associated_with_person(item, person):
-                associated_negative.add(str(item["class_name"]).lower())
-
-        # Determine missing required PPE for this person
-        missing = [ppe for ppe in REQUIRED_PPE_CLASSES if ppe not in associated_positive]
-        
-        # A direct negative detection already creates an explicit confirmed violation.
-        # Do not add a second generic review item for that same PPE category.
-        missing = [
-            ppe for ppe in missing
-            if f"no_{'goggle' if ppe == 'goggles' else ppe}" not in associated_negative
-        ]
-
-        review_created = False
-        if missing:
-            review_created = True
-            findings.append({
-                "photo_id": photo_id,
-                "analysis_run_id": analysis_run_id,
-                "project_id": project_id,
-                "site_id": site_id,
-                "area_id": area_id,
-                "finding_type": "PPE_NOT_DETECTED_REVIEW",
-                "severity": "LOW",
-                "title": f"Worker {worker_number}: PPE review required",
-                "description": "Required PPE was not confidently detected for this worker. This is not a confirmed violation; Safety Officer visual verification is required.",
-                "confidence": float(person.get("confidence", 0.0)),
-                "status": "OPEN",
-            })
-
-        logger.info(
-            f"PPE REVIEW WORKER DEBUG: worker_number={worker_number}, "
-            f"person_bbox=[{person.get('x1')}, {person.get('y1')}, {person.get('x2')}, {person.get('y2')}], "
-            f"associated_ppe={sorted(list(associated_positive))}, "
-            f"missing_ppe={missing}, "
-            f"review_created={review_created}"
-        )
-
-    logger.info(
-        f"PPE REVIEW DEBUG\n"
-        f"person_count={len(people)}\n"
-        f"positive_ppe_count={len(positive_ppe)}\n"
-        f"direct_negative_count={len(direct_negative_dets)}\n"
-        f"review_findings_count={len(findings)}"
-    )
-
-    return findings
-
 
 def analyze_detections(
     detections: List[Dict[str, Any]],
@@ -333,8 +122,284 @@ def analyze_detections(
                 "confidence": confidence,
                 "status": "OPEN"
             })
+        # Note: 'Person' and 'none' classes are kept in detections but don't generate standalone findings.
 
-    findings.extend(_review_findings_for_people(
-        detections, photo_id, analysis_run_id, project_id, site_id, area_id
-    ))
     return findings
+
+
+def build_person_ppe_report(detections: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """
+    Groups YOLO detections by person and evaluates compliance for each worker.
+    
+    Returns:
+        (people_list, summary_dict)
+    """
+    person_dets = []
+    item_dets = []
+    
+    for det in detections:
+        cls_name = str(det.get("class_name", "")).strip().lower()
+        if cls_name in ("person", "worker"):
+            person_dets.append(det)
+        elif cls_name != "none":
+            item_dets.append(det)
+            
+    # Sort person detections left-to-right by x1 coordinate so Person 1 is leftmost
+    person_dets.sort(key=lambda d: d.get("x1", 0.0))
+    
+    # If no explicit Person box was detected, group item detections into x-center clusters
+    if not person_dets and item_dets:
+        x_centers = [(d.get("x1", 0) + d.get("x2", 0)) / 2.0 for d in item_dets]
+        x_centers.sort()
+        clusters = []
+        for xc in x_centers:
+            if not clusters or (xc - clusters[-1][-1]) > 150:
+                clusters.append([xc])
+            else:
+                clusters[-1].append(xc)
+        
+        for idx, cl in enumerate(clusters):
+            avg_x = sum(cl) / len(cl)
+            person_dets.append({
+                "class_name": "person",
+                "confidence": 0.90,
+                "x1": max(0.0, avg_x - 100),
+                "y1": 0.0,
+                "x2": avg_x + 100,
+                "y2": 1000.0
+            })
+
+    people: List[Dict[str, Any]] = []
+    
+    p_info = []
+    for idx, p_box in enumerate(person_dets, start=1):
+        x1 = float(p_box.get("x1", 0.0))
+        y1 = float(p_box.get("y1", 0.0))
+        x2 = float(p_box.get("x2", 0.0))
+        y2 = float(p_box.get("y2", 0.0))
+        width = max(1.0, x2 - x1)
+        height = max(1.0, y2 - y1)
+        cx = (x1 + x2) / 2.0
+        cy = (y1 + y2) / 2.0
+        conf = round(float(p_box.get("confidence", 0.90)), 2)
+        
+        p_info.append({
+            "person_id": idx,
+            "confidence": conf,
+            "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+            "cx": cx, "cy": cy,
+            "width": width, "height": height,
+            "items": {"helmet": [], "vest": [], "gloves": [], "boots": []},
+            "negatives": {"no_helmet": False, "no_gloves": False, "no_boots": False}
+        })
+        
+    # Assign each item to the single best matching person
+    for item in item_dets:
+        cls = str(item.get("class_name", "")).strip().lower()
+        ix1 = float(item.get("x1", 0.0))
+        iy1 = float(item.get("y1", 0.0))
+        ix2 = float(item.get("x2", 0.0))
+        iy2 = float(item.get("y2", 0.0))
+        icx = (ix1 + ix2) / 2.0
+        icy = (iy1 + iy2) / 2.0
+        iconf = round(float(item.get("confidence", 0.0)), 2)
+        
+        if not p_info:
+            continue
+            
+        best_p = None
+        best_score = -1.0
+        
+        for p in p_info:
+            margin = p["width"] * 0.40
+            if not (p["x1"] - margin <= icx <= p["x2"] + margin):
+                continue
+                
+            dist_x = abs(icx - p["cx"]) / p["width"]
+            rel_y = (icy - p["y1"]) / p["height"] if p["height"] > 0 else 0.5
+            
+            vertical_fit = 1.0
+            if cls in ("helmet", "no_helmet") and rel_y > 0.45:
+                vertical_fit = 0.5
+            elif cls in ("boots", "no_boots") and rel_y < 0.55:
+                vertical_fit = 0.5
+            elif cls == "vest" and (rel_y < 0.15 or rel_y > 0.85):
+                vertical_fit = 0.5
+                
+            score = (1.0 - dist_x) * vertical_fit
+            if score > best_score:
+                best_score = score
+                best_p = p
+                
+        if not best_p:
+            best_p = min(p_info, key=lambda p: abs(icx - p["cx"]))
+            
+        if cls == "helmet":
+            best_p["items"]["helmet"].append(iconf)
+        elif cls == "no_helmet":
+            best_p["negatives"]["no_helmet"] = True
+        elif cls == "vest":
+            best_p["items"]["vest"].append(iconf)
+        elif cls == "gloves":
+            best_p["items"]["gloves"].append(iconf)
+        elif cls == "no_gloves":
+            best_p["negatives"]["no_gloves"] = True
+        elif cls == "boots":
+            best_p["items"]["boots"].append(iconf)
+        elif cls == "no_boots":
+            best_p["negatives"]["no_boots"] = True
+
+    for p in p_info:
+        helmet_det = len(p["items"]["helmet"]) > 0 and not p["negatives"]["no_helmet"]
+        helmet_conf = max(p["items"]["helmet"]) if helmet_det else None
+        
+        vest_det = len(p["items"]["vest"]) > 0
+        vest_conf = max(p["items"]["vest"]) if vest_det else None
+        
+        gloves_det = len(p["items"]["gloves"]) > 0 and not p["negatives"]["no_gloves"]
+        gloves_conf = max(p["items"]["gloves"]) if gloves_det else None
+        
+        boots_det = len(p["items"]["boots"]) > 0 and not p["negatives"]["no_boots"]
+        boots_conf = max(p["items"]["boots"]) if boots_det else None
+        
+        violations = []
+        if not helmet_det:
+            violations.append("Safety Helmet Missing")
+        if not vest_det:
+            violations.append("High-Visibility Vest Missing")
+        if not gloves_det:
+            violations.append("Protective Gloves Missing")
+        if not boots_det:
+            violations.append("Safety Boots Missing")
+            
+        compliant = (len(violations) == 0)
+        
+        people.append({
+            "person_id": p["person_id"],
+            "confidence": p["confidence"],
+            "helmet": {"detected": helmet_det, "confidence": helmet_conf},
+            "vest": {"detected": vest_det, "confidence": vest_conf},
+            "gloves": {"detected": gloves_det, "confidence": gloves_conf},
+            "boots": {"detected": boots_det, "confidence": boots_conf},
+            "violations": violations,
+            "compliant": compliant
+        })
+        
+    workers_detected = len(people)
+    fully_compliant = sum(1 for p in people if p["compliant"])
+    workers_with_violations = sum(1 for p in people if not p["compliant"])
+    overall_compliance = round((fully_compliant / workers_detected) * 100, 1) if workers_detected > 0 else 100.0
+    
+    summary = {
+        "workers_detected": workers_detected,
+        "fully_compliant": fully_compliant,
+        "workers_with_violations": workers_with_violations,
+        "overall_compliance": overall_compliance
+    }
+    
+    return people, summary
+
+
+def get_project_ppe_summary(
+    db: Any,
+    project_id: int,
+    site_id: Optional[int] = None,
+    area_id: Optional[int] = None
+) -> Dict[str, Any]:
+    """
+    Calculates project-level PPE compliance metrics aggregated across the LATEST
+    completed photo analysis runs for all site photos in the project/site/area.
+    
+    SINGLE SOURCE OF TRUTH for Project Intelligence, AI Findings summary,
+    and GenAI Assistant retrieval.
+    """
+    import models
+    
+    photo_q = db.query(models.SitePhoto).filter(models.SitePhoto.project_id == project_id)
+    if site_id:
+        photo_q = photo_q.filter(models.SitePhoto.site_id == site_id)
+    if area_id:
+        photo_q = photo_q.filter(models.SitePhoto.area_id == area_id)
+        
+    photos = photo_q.all()
+    
+    total_photos = len(photos)
+    photos_analyzed = 0
+    
+    total_workers = 0
+    total_compliant = 0
+    total_violations = 0
+    all_people = []
+    violations_summary_list = []
+    compliance_summary_list = []
+    
+    for photo in photos:
+        latest_run = (
+            db.query(models.AIAnalysisRun)
+            .filter(
+                models.AIAnalysisRun.photo_id == photo.id,
+                models.AIAnalysisRun.status == "COMPLETED"
+            )
+            .order_by(models.AIAnalysisRun.id.desc())
+            .first()
+        )
+        
+        if not latest_run:
+            continue
+            
+        photos_analyzed += 1
+        
+        people = []
+        summary = None
+        
+        if getattr(latest_run, "people_json", None) and getattr(latest_run, "summary_json", None):
+            try:
+                people = json.loads(latest_run.people_json)
+                summary = json.loads(latest_run.summary_json)
+            except Exception:
+                pass
+                
+        if not people or not summary:
+            dets_dicts = [
+                {"class_name": d.class_name, "confidence": d.confidence, "x1": d.x1, "y1": d.y1, "x2": d.x2, "y2": d.y2}
+                for d in latest_run.detections
+            ]
+            people, summary = build_person_ppe_report(dets_dicts)
+            
+        workers_cnt = summary.get("workers_detected", 0)
+        compliant_cnt = summary.get("fully_compliant", 0)
+        violating_cnt = summary.get("workers_with_violations", 0)
+        
+        total_workers += workers_cnt
+        total_compliant += compliant_cnt
+        total_violations += violating_cnt
+        
+        for p in people:
+            p_copy = dict(p)
+            p_copy["photo_id"] = photo.id
+            all_people.append(p_copy)
+            
+            p_id = p.get("person_id")
+            if p.get("compliant"):
+                compliance_summary_list.append(f"Photo #{photo.id} - Person {p_id}: Fully PPE Compliant")
+            else:
+                viols = p.get("violations", [])
+                viols_str = ", ".join(viols) if viols else "Unspecified PPE Violation"
+                violations_summary_list.append(f"Photo #{photo.id} - Person {p_id}: {viols_str}")
+
+    overall_compliance = round((total_compliant / total_workers * 100), 1) if total_workers > 0 else 100.0
+
+    return {
+        "project_id": project_id,
+        "site_id": site_id,
+        "area_id": area_id,
+        "total_photos": total_photos,
+        "photos_analyzed": photos_analyzed,
+        "workers_detected": total_workers,
+        "fully_compliant": total_compliant,
+        "workers_with_violations": total_violations,
+        "overall_compliance": overall_compliance,
+        "violations_list": violations_summary_list,
+        "compliance_list": compliance_summary_list,
+        "people": all_people
+    }
