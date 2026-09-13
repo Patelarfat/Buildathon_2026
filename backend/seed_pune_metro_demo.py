@@ -39,11 +39,11 @@ def seed_pune_metro():
                 db.flush()
             return u
 
-        u_pm = get_or_create_user("pune_pm@metro.com", "Rajesh Sharma", "Project Manager")
-        u_sup = get_or_create_user("pune_supervisor@metro.com", "Amit Patil", "Site Supervisor")
-        u_safety = get_or_create_user("pune_safety@metro.com", "Pooja Deshmukh", "Safety Officer")
-        u_contractor = get_or_create_user("pune_contractor@metro.com", "Vikas Shinde", "Contractor")
-        u_admin = get_or_create_user("pune_admin@metro.com", "Sunil Kulkarni", "Admin")
+        u_pm = get_or_create_user("pune_pm@metro.com", "Rajesh Sharma", "PROJECT_MANAGER")
+        u_sup = get_or_create_user("pune_supervisor@metro.com", "Amit Patil", "SITE_SUPERVISOR")
+        u_safety = get_or_create_user("pune_safety@metro.com", "Pooja Deshmukh", "SAFETY_OFFICER")
+        u_contractor = get_or_create_user("pune_contractor@metro.com", "Vikas Shinde", "CONTRACTOR")
+        u_admin = get_or_create_user("pune_admin@metro.com", "Sunil Kulkarni", "ADMIN")
 
         print("[2/9] Creating Project...")
         project = models.Project(
@@ -59,11 +59,11 @@ def seed_pune_metro():
         project_id = project.id
 
         for user, role in [
-            (u_pm, "Project Manager"),
-            (u_sup, "Site Supervisor"),
-            (u_safety, "Safety Officer"),
-            (u_contractor, "Contractor"),
-            (u_admin, "Admin")
+            (u_pm, "PROJECT_MANAGER"),
+            (u_sup, "SITE_SUPERVISOR"),
+            (u_safety, "SAFETY_OFFICER"),
+            (u_contractor, "CONTRACTOR"),
+            (u_admin, "ADMIN")
         ]:
             db.add(models.ProjectMember(project_id=project_id, user_id=user.id, role=role))
         db.flush()

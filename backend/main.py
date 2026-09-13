@@ -35,13 +35,50 @@ os.makedirs(os.path.join(UPLOAD_DIR, "photos"), exist_ok=True)
 os.makedirs(os.path.join(UPLOAD_DIR, "ai"), exist_ok=True)
 
 
+def normalize_database_roles():
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        role_updates = [
+            ("Project Manager", "PROJECT_MANAGER"),
+            ("PROJECT MANAGER", "PROJECT_MANAGER"),
+            ("Site Supervisor", "SITE_SUPERVISOR"),
+            ("SITE SUPERVISOR", "SITE_SUPERVISOR"),
+            ("Safety Officer", "SAFETY_OFFICER"),
+            ("SAFETY OFFICER", "SAFETY_OFFICER"),
+            ("Construction Administrator", "ADMIN"),
+            ("CONSTRUCTION ADMINISTRATOR", "ADMIN"),
+            ("CONSTRUCTION_ADMINISTRATOR", "ADMIN"),
+            ("Administrator", "ADMIN"),
+            ("Admin", "ADMIN"),
+            ("Contractor", "CONTRACTOR"),
+            ("CONTRACTOR", "CONTRACTOR"),
+            ("ENGINEER", "SITE_SUPERVISOR"),
+            ("ENGINEER2", "SITE_SUPERVISOR"),
+            ("Engineer", "SITE_SUPERVISOR"),
+        ]
+        for old_role, new_role in role_updates:
+            db.execute(text(f"UPDATE users SET role = '{new_role}' WHERE role = '{old_role}'"))
+            db.execute(text(f"UPDATE project_members SET role = '{new_role}' WHERE role = '{old_role}'"))
+        db.execute(text("UPDATE users SET role = 'SITE_SUPERVISOR' WHERE role NOT IN ('PROJECT_MANAGER', 'SITE_SUPERVISOR', 'SAFETY_OFFICER', 'CONTRACTOR', 'ADMIN')"))
+        db.execute(text("UPDATE project_members SET role = 'SITE_SUPERVISOR' WHERE role NOT IN ('PROJECT_MANAGER', 'SITE_SUPERVISOR', 'SAFETY_OFFICER', 'CONTRACTOR', 'ADMIN')"))
+        db.commit()
+        logger.info("Database roles normalized successfully.")
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"Could not normalize database roles on startup: {e}")
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables verified/created successfully.")
+        normalize_database_roles()
     except Exception as e:
-        logger.warning(f"Database connection not available at startup: {e}")
+        logger.warning(f"Database initialization error at startup: {e}")
 
     try:
         register_rag_listeners()

@@ -4,10 +4,68 @@ from pydantic import BaseModel, Field, field_validator
 
 
 # --- User Schemas ---
+VALID_ROLES = {
+    "PROJECT_MANAGER",
+    "SITE_SUPERVISOR",
+    "SAFETY_OFFICER",
+    "CONTRACTOR",
+    "ADMIN"
+}
+
+ROLE_NORMALIZATION_MAP = {
+    "PROJECT_MANAGER": "PROJECT_MANAGER",
+    "PROJECT MANAGER": "PROJECT_MANAGER",
+    "SITE_SUPERVISOR": "SITE_SUPERVISOR",
+    "SITE SUPERVISOR": "SITE_SUPERVISOR",
+    "SUPERVISOR": "SITE_SUPERVISOR",
+    "SITE_ENGINEER": "SITE_SUPERVISOR",
+    "SITE ENGINEER": "SITE_SUPERVISOR",
+    "ENGINEER": "SITE_SUPERVISOR",
+    "ENGINEER2": "SITE_SUPERVISOR",
+    "SAFETY_OFFICER": "SAFETY_OFFICER",
+    "SAFETY OFFICER": "SAFETY_OFFICER",
+    "CONTRACTOR": "CONTRACTOR",
+    "ADMIN": "ADMIN",
+    "CONSTRUCTION ADMINISTRATOR": "ADMIN",
+    "CONSTRUCTION_ADMINISTRATOR": "ADMIN",
+    "ADMINISTRATOR": "ADMIN",
+}
+
+
+def normalize_role(v: str) -> str:
+    if not v:
+        return "PROJECT_MANAGER"
+    cleaned = v.strip().upper().replace("-", "_")
+    if cleaned in ROLE_NORMALIZATION_MAP:
+        return ROLE_NORMALIZATION_MAP[cleaned]
+    underscore_version = cleaned.replace(" ", "_")
+    if underscore_version in VALID_ROLES:
+        return underscore_version
+    if underscore_version in ROLE_NORMALIZATION_MAP:
+        return ROLE_NORMALIZATION_MAP[underscore_version]
+    if cleaned in VALID_ROLES:
+        return cleaned
+    if "ENGINEER" in cleaned or "SUPERVISOR" in cleaned:
+        return "SITE_SUPERVISOR"
+    if "SAFETY" in cleaned:
+        return "SAFETY_OFFICER"
+    if "ADMIN" in cleaned:
+        return "ADMIN"
+    if "CONTRACT" in cleaned:
+        return "CONTRACTOR"
+    if "MANAGE" in cleaned:
+        return "PROJECT_MANAGER"
+    return "CONTRACTOR"
+
+
 class UserBase(BaseModel):
     name: str = Field(..., min_length=1)
     email: str = Field(..., min_length=1)
     role: str = Field(..., min_length=1)
+
+    @field_validator("role")
+    def validate_role(cls, v: str) -> str:
+        return normalize_role(v)
 
 
 class UserCreate(UserBase):
@@ -80,24 +138,12 @@ class SiteDetailResponse(SiteResponse):
 
 
 # --- Project Member Schemas ---
-VALID_ROLES = {
-    "PROJECT_MANAGER",
-    "SITE_SUPERVISOR",
-    "SAFETY_OFFICER",
-    "CONTRACTOR",
-    "ADMIN"
-}
-
-
 class ProjectMemberBase(BaseModel):
     role: str
 
     @field_validator("role")
     def validate_role(cls, v: str) -> str:
-        v_upper = v.upper()
-        if v_upper not in VALID_ROLES:
-            raise ValueError(f"Role must be one of: {', '.join(sorted(VALID_ROLES))}")
-        return v_upper
+        return normalize_role(v)
 
 
 class ProjectMemberCreate(ProjectMemberBase):
