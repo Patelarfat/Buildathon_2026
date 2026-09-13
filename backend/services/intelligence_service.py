@@ -42,6 +42,7 @@ class IntelligenceService:
 
             # Counts for table display (Violations only for AI)
             ai_count = db.query(func.count(models.AISafetyFinding.id)).filter(
+                models.AISafetyFinding.project_id == project_id,
                 models.AISafetyFinding.area_id == area.id,
                 models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
                 models.AISafetyFinding.created_at >= cutoff_date,
@@ -49,11 +50,13 @@ class IntelligenceService:
             ).scalar() or 0
 
             inc_count = db.query(func.count(models.SafetyIncident.id)).filter(
+                models.SafetyIncident.project_id == project_id,
                 models.SafetyIncident.area_id == area.id,
                 models.SafetyIncident.created_at >= cutoff_date
             ).scalar() or 0
 
             obs_count = db.query(func.count(models.Observation.id)).filter(
+                models.Observation.project_id == project_id,
                 models.Observation.area_id == area.id,
                 models.Observation.created_at >= cutoff_date,
                 models.Observation.status != "RESOLVED"
@@ -74,7 +77,7 @@ class IntelligenceService:
                 "site_name": site.name if site else "Unknown Site",
                 "risk_score": risk_eval["score"],
                 "risk_level": risk_eval["level"],
-                "open_issues": obs_count + (1 if inc_count > 0 else 0) + (1 if ai_count > 0 else 0),
+                "open_issues": obs_count + inc_count + ai_count,
                 "ai_findings_count": ai_count,
                 "incidents_count": inc_count,
                 "observations_count": obs_count,

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Project } from "../lib/api";
 import { FolderKanban, MapPin, ArrowRight, Plus } from "lucide-react";
+import { useRole } from "../lib/RoleContext";
 
 interface WorkspaceProjectsSectionProps {
   projects: Project[];
@@ -13,6 +14,7 @@ export default function WorkspaceProjectsSection({
   projects,
   loading,
 }: WorkspaceProjectsSectionProps) {
+  const { roleConfig } = useRole();
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "ACTIVE":
@@ -150,7 +152,7 @@ export default function WorkspaceProjectsSection({
                     1 Site · {formatStatusText(project.status)}
                   </span>
                   <Link
-                    href={`/projects/${project.id}`}
+                    href={roleConfig.defaultLandingPath(project.id)}
                     className="inline-flex items-center gap-1 text-xs font-bold text-slate-900 group-hover:text-[#D99A16] transition-colors"
                   >
                     <span>Open project</span>

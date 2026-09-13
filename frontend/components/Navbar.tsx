@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getHealth } from "../lib/api";
-import { Plus } from "lucide-react";
+import { Plus, UserCheck } from "lucide-react";
+import { useRole, DemoRole } from "../lib/RoleContext";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [healthy, setHealthy] = useState<boolean | null>(null);
+  const { role, roleConfig, setRole } = useRole();
 
   const isHomePage = pathname === "/";
 
@@ -83,9 +85,29 @@ export default function Navbar() {
         </div>
 
         {/* Right Section */}
-        <div className="flex items-center space-x-5">
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          {/* Demo Role Selector */}
+          <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/90 rounded-xl px-2.5 py-1.5 text-xs shadow-inner">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-[#F5B82E] uppercase tracking-wider">
+              <UserCheck className="w-3.5 h-3.5 text-[#F5B82E] shrink-0" />
+              <span className="hidden xl:inline">Demo Role:</span>
+            </div>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as DemoRole)}
+              className="bg-transparent text-white font-semibold text-xs focus:outline-none cursor-pointer pr-1"
+              aria-label="Select Demo Role"
+            >
+              <option value="PROJECT_MANAGER" className="bg-[#0B0F14] text-white">Project Manager</option>
+              <option value="SAFETY_OFFICER" className="bg-[#0B0F14] text-white">Safety Officer</option>
+              <option value="SITE_SUPERVISOR" className="bg-[#0B0F14] text-white">Site Supervisor</option>
+              <option value="CONTRACTOR" className="bg-[#0B0F14] text-white">Contractor</option>
+              <option value="ADMINISTRATOR" className="bg-[#0B0F14] text-white">Construction Administrator</option>
+            </select>
+          </div>
+
           {/* Health Status Indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-300">
+          <div className="hidden lg:flex items-center gap-1.5 text-xs text-slate-300">
             <span
               className={`w-1.5 h-1.5 rounded-full ${
                 healthy === true
@@ -110,12 +132,15 @@ export default function Navbar() {
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-[#F5B82E] hover:bg-[#D99A16] text-[#0B0F14] text-xs font-semibold transition-colors active:scale-[0.98]"
           >
             <Plus className="w-3.5 h-3.5 text-[#0B0F14]" />
-            <span>New Project</span>
+            <span className="hidden sm:inline">New Project</span>
           </Link>
 
-          {/* User Initial Badge */}
-          <div className="w-7 h-7 rounded bg-slate-800/80 border border-white/10 flex items-center justify-center text-[11px] font-medium text-slate-300">
-            OM
+          {/* User Initial Badge with Active Role Shortcode */}
+          <div
+            className="w-7 h-7 rounded bg-slate-800/80 border border-white/10 flex items-center justify-center text-[11px] font-bold text-[#F5B82E]"
+            title={`Active Demo Role: ${roleConfig.label} (${roleConfig.badge})`}
+          >
+            {roleConfig.shortCode}
           </div>
         </div>
       </div>

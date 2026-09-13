@@ -9,7 +9,11 @@ import {
   IncidentStatus,
   ProjectDetail,
   User,
+  Site,
+  Area,
   getProject,
+  getSitesForProject,
+  getAreasForSite,
   getIncidents,
   createIncident,
   updateIncident,
@@ -57,6 +61,8 @@ export default function SafetyIncidentsPage({
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [incidents, setIncidents] = useState<SafetyIncident[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,22 +85,47 @@ export default function SafetyIncidentsPage({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const loadAreasForSite = async (siteId: number) => {
+    if (!siteId || isNaN(siteId)) {
+      setAreas([]);
+      setSelectedAreaId("");
+      return;
+    }
+    try {
+      const areaList = await getAreasForSite(siteId);
+      setAreas(areaList);
+    } catch {
+      setAreas([]);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [projData, incidentsData, usersData] = await Promise.all([
+      const [projData, sitesData, incidentsData, usersData] = await Promise.all([
         getProject(projectId),
+        getSitesForProject(projectId),
         getIncidents(projectId),
         getUsers(),
       ]);
       setProject(projData);
+      setSites(sitesData);
       setIncidents(incidentsData);
       setUsers(usersData);
 
-      if (projData.sites.length > 0 && selectedSiteId === "") {
-        setSelectedSiteId(projData.sites[0].id);
+      if (sitesData.length > 0) {
+        const initialSiteId = selectedSiteId !== "" && sitesData.some((s) => s.id === Number(selectedSiteId))
+          ? Number(selectedSiteId)
+          : sitesData[0].id;
+        setSelectedSiteId(initialSiteId);
+        await loadAreasForSite(initialSiteId);
+      } else {
+        setSelectedSiteId("");
+        setAreas([]);
+        setSelectedAreaId("");
       }
+
       if (usersData.length > 0 && reportedBy === "") {
         setReportedBy(usersData[0].id);
       }
@@ -133,7 +164,7 @@ export default function SafetyIncidentsPage({
       await createIncident({
         project_id: projectId,
         site_id: Number(selectedSiteId),
-        area_id: selectedAreaId ? Number(selectedAreaId) : undefined,
+        area_id: selectedAreaId !== "" ? Number(selectedAreaId) : undefined,
         reported_by: Number(reportedBy),
         incident_date: incidentDate,
         incident_type: incidentType,
@@ -175,8 +206,6 @@ export default function SafetyIncidentsPage({
       alert(err.message || "Failed to delete incident");
     }
   };
-
-  const currentSite = project?.sites.find((s) => s.id === Number(selectedSiteId));
 
   // Incident Filtering Logic
   const filteredIncidents = incidents.filter((inc) => {
@@ -402,15 +431,21 @@ export default function SafetyIncidentsPage({
                 </label>
                 <select
                   value={selectedSiteId}
-                  onChange={(e) => {
-                    setSelectedSiteId(Number(e.target.value));
+                  onChange={async (e) => {
+                    const val = e.target.value ? Number(e.target.value) : "";
+                    setSelectedSiteId(val);
                     setSelectedAreaId("");
+                    if (typeof val === "number") {
+                      await loadAreasForSite(val);
+                    } else {
+                      setAreas([]);
+                    }
                   }}
                   className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs font-semibold text-[#171717] focus:outline-none focus:border-[#F5B82E]"
                   required
                 >
                   <option value="">Select Site</option>
-                  {project?.sites.map((s) => (
+                  {sites.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
@@ -428,9 +463,9 @@ export default function SafetyIncidentsPage({
                   className="w-full bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl px-3 py-2 text-xs font-semibold text-[#171717] focus:outline-none focus:border-[#F5B82E]"
                 >
                   <option value="">Overall Site</option>
-                  {currentSite?.areas.map((a) => (
+                  {areas.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.name}
+                      {a.name} ({a.area_type || "Zone"})
                     </option>
                   ))}
                 </select>

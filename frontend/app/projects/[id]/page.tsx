@@ -559,18 +559,24 @@ export default function ProjectDetailPage({
         </div>
 
         {/* 9. SITES & MEMBERS MANAGEMENT (Two Column Grid) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <SiteList
-            projectId={project.id}
-            sites={project.sites || []}
-            onSitesChanged={loadProject}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start scroll-mt-24">
+          <div id="sites" className="scroll-mt-24">
+            <div id="areas" className="scroll-mt-24">
+              <SiteList
+                projectId={project.id}
+                sites={project.sites || []}
+                onSitesChanged={loadProject}
+              />
+            </div>
+          </div>
 
-          <MemberList
-            projectId={project.id}
-            members={project.members || []}
-            onMembersChanged={loadProject}
-          />
+          <div id="team" className="scroll-mt-24">
+            <MemberList
+              projectId={project.id}
+              members={project.members || []}
+              onMembersChanged={loadProject}
+            />
+          </div>
         </div>
 
         {/* UNIFIED ACTIVITY FEED STREAM */}

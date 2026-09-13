@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Project, ProjectStatus } from "../lib/api";
 import { MapPin, Building2, Grid, Calendar, ArrowRight, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { useRole } from "../lib/RoleContext";
 
 interface ProjectCardProps {
   project: Project;
@@ -21,6 +22,7 @@ export const statusColors: Record<ProjectStatus, { bg: string; text: string; bor
 export default function ProjectCard({ project, onDelete, onEdit }: ProjectCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const { roleConfig } = useRole();
 
   const statusStyle = statusColors[project.status] || {
     bg: "bg-slate-100",
@@ -185,7 +187,7 @@ export default function ProjectCard({ project, onDelete, onEdit }: ProjectCardPr
             </button>
           )}
           <Link
-            href={`/projects/${project.id}`}
+            href={roleConfig.defaultLandingPath(project.id)}
             className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2 rounded-lg text-xs sm:text-sm font-bold bg-[#F5B82E] hover:bg-[#D99A16] text-[#0B0F14] transition-all shadow-sm active:scale-[0.98]"
           >
             <span>Open project</span>
