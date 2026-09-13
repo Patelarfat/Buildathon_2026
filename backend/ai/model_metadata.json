@@ -1,6 +1,6 @@
 {
-  "model_name": "construction-ppe-yolo",
-  "model_version": "v1",
+  "model_name": "finetuned-safetyvision-ppe",
+  "model_version": "v2",
   "base_model": "yolo11n.pt",
   "ultralytics_version": "8.4.147",
   "dataset_name": "Construction-PPE (Ultralytics official)",

@@ -18,6 +18,12 @@ router = APIRouter(tags=["AI Computer Vision & Safety"])
 UPLOAD_ROOT = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
 
 
+@router.get("/api/ai/model-info")
+def get_active_model_info():
+    """Expose the exact in-memory model used by production inference."""
+    return YOLOService.get_instance().get_model_info()
+
+
 @router.post("/api/photos/{photo_id}/analyze", response_model=schemas.AnalysisResultResponse, status_code=status.HTTP_200_OK)
 def analyze_photo(
     photo_id: int,
@@ -59,7 +65,9 @@ def analyze_photo(
             )
             .filter(
                 models.AIAnalysisRun.photo_id == photo_id,
+                models.AIAnalysisRun.model_name == model_name,
                 models.AIAnalysisRun.model_version == model_version,
+                models.AIAnalysisRun.created_at >= yolo.loaded_at,
                 models.AIAnalysisRun.status == "COMPLETED"
             )
             .order_by(models.AIAnalysisRun.id.desc())
@@ -222,20 +230,32 @@ def get_photo_analysis(photo_id: int, db: Session = Depends(get_db)):
     if not photo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Photo {photo_id} not found")
 
+    # Never surface a legacy database result as the current model's analysis.
+    # The frontend turns this 404 into a fresh inference request.
+    yolo = YOLOService.get_instance()
     run = (
         db.query(models.AIAnalysisRun)
         .options(
             joinedload(models.AIAnalysisRun.detections),
             joinedload(models.AIAnalysisRun.safety_findings)
         )
-        .filter(models.AIAnalysisRun.photo_id == photo_id)
+        .filter(
+            models.AIAnalysisRun.photo_id == photo_id,
+            models.AIAnalysisRun.model_name == yolo.model_name,
+            models.AIAnalysisRun.model_version == yolo.model_version,
+            models.AIAnalysisRun.created_at >= yolo.loaded_at,
+            models.AIAnalysisRun.status == "COMPLETED",
+        )
         .order_by(models.AIAnalysisRun.id.desc())
         .first()
     )
     if not run:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No AI analysis found for photo {photo_id}"
+            detail=(
+                f"No completed {yolo.model_name} {yolo.model_version} analysis "
+                f"found for photo {photo_id}."
+            )
         )
     return run
 
@@ -357,7 +377,9 @@ def bulk_analyze_pending_photos(
         .join(models.SitePhoto, models.AIAnalysisRun.photo_id == models.SitePhoto.id)
         .filter(
             models.SitePhoto.project_id == project_id,
+            models.AIAnalysisRun.model_name == yolo.model_name,
             models.AIAnalysisRun.model_version == version,
+            models.AIAnalysisRun.created_at >= yolo.loaded_at,
             models.AIAnalysisRun.status == "COMPLETED"
         )
         .all()
