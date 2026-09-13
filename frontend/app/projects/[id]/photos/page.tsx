@@ -22,6 +22,8 @@ import {
   updateAIFindingStatus,
   bulkAnalyzePendingPhotos,
   isPPEViolation,
+  isPPEReview,
+  isPPEHazardOrReview,
   isPPECompliance,
   API_BASE,
 } from "../../../../lib/api";
@@ -37,6 +39,7 @@ import {
   MapPin,
   ShieldCheck,
   ShieldAlert,
+  AlertTriangle,
   CheckCircle2,
   Trash2,
   Eye,
@@ -710,6 +713,8 @@ export default function ProjectPhotosPage({
               {(() => {
                 const complianceFindings = activeAnalysis.safety_findings.filter(isPPECompliance);
                 const violationFindings = activeAnalysis.safety_findings.filter(isPPEViolation);
+                const reviewFindings = activeAnalysis.safety_findings.filter(isPPEReview);
+                const totalHazardsAndReview = violationFindings.length + reviewFindings.length;
 
                 return (
                   <div className="space-y-4 pt-2 border-t border-[#E7E5E4]">
@@ -727,40 +732,88 @@ export default function ProjectPhotosPage({
                           {complianceFindings.map((cf) => (
                             <div key={cf.id} className="bg-emerald-50/60 border border-emerald-200 p-3 rounded-xl flex items-center justify-between text-xs text-emerald-900 font-semibold">
                               <span>✓ {cf.title}</span>
-                              <span className="text-[10px] bg-emerald-100 px-2 py-0.5 rounded font-bold">VERIFIED</span>
+                              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold uppercase">VERIFIED</span>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
 
-                    {/* Violations */}
+                    {/* Safety Hazards & Review */}
                     <div className="space-y-2 pt-2 border-t border-[#E7E5E4]">
                       <h4 className="text-xs font-extrabold text-rose-700 uppercase tracking-wider flex items-center space-x-1.5">
                         <ShieldAlert className="w-4 h-4 text-rose-600" />
-                        <span>Safety Hazards & Review ({violationFindings.length})</span>
+                        <span>Safety Hazards & Review ({totalHazardsAndReview})</span>
                       </h4>
 
-                      {violationFindings.length === 0 ? (
+                      {/* State C: 0 violations AND 0 review findings */}
+                      {totalHazardsAndReview === 0 ? (
                         <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-semibold flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                           <span>No PPE safety violations detected.</span>
                         </div>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
+                          {/* Review banner when human review is required */}
+                          {reviewFindings.length > 0 && (
+                            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 font-semibold flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                              <span>Some PPE could not be confidently verified. Safety Officer review is required.</span>
+                            </div>
+                          )}
+
+                          {/* Confirmed Violations */}
                           {violationFindings.map((f) => (
-                            <div key={f.id} className="p-3.5 bg-[#FAF9F6] border border-[#E7E5E4] rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div key={f.id} className="p-3.5 bg-[#FAF9F6] border border-rose-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                               <div className="space-y-1">
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                                   <span className={`text-[10px] uppercase px-2 py-0.5 rounded border ${severityBadge(f.severity)}`}>
                                     {f.severity}
+                                  </span>
+                                  <span className="text-[10px] bg-rose-100 text-rose-800 border border-rose-200 font-bold px-2 py-0.5 rounded uppercase">
+                                    🔴 CONFIRMED AI VIOLATION
                                   </span>
                                   <span className="font-bold text-slate-900">{f.title}</span>
                                 </div>
                                 {f.description && <p className="text-slate-600 text-[11px]">{f.description}</p>}
                               </div>
 
-                              <div className="flex items-center space-x-1.5">
+                              <div className="flex items-center space-x-1.5 shrink-0">
+                                <button
+                                  onClick={() => handleUpdateFindingStatus(f.id, "REVIEWED")}
+                                  disabled={updatingFindingId === f.id || f.status === "REVIEWED"}
+                                  className="px-2.5 py-1 text-[11px] font-bold bg-white hover:bg-slate-50 border border-[#E7E5E4] rounded-md transition-colors"
+                                >
+                                  Reviewed
+                                </button>
+                                <button
+                                  onClick={() => handleUpdateFindingStatus(f.id, "RESOLVED")}
+                                  disabled={updatingFindingId === f.id || f.status === "RESOLVED"}
+                                  className="px-2.5 py-1 text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md transition-colors"
+                                >
+                                  Resolve
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+
+                          {/* Human Review Items */}
+                          {reviewFindings.map((f) => (
+                            <div key={f.id} className="p-3.5 bg-amber-50/40 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                              <div className="space-y-1">
+                                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                                  <span className={`text-[10px] uppercase px-2 py-0.5 rounded border ${severityBadge(f.severity)}`}>
+                                    {f.severity}
+                                  </span>
+                                  <span className="text-[10px] bg-amber-100 text-amber-900 border border-amber-300 font-bold px-2 py-0.5 rounded uppercase">
+                                    🟡 HUMAN REVIEW REQUIRED
+                                  </span>
+                                  <span className="font-bold text-amber-950">{f.title}</span>
+                                </div>
+                                {f.description && <p className="text-amber-900/80 text-[11px]">{f.description}</p>}
+                              </div>
+
+                              <div className="flex items-center space-x-1.5 shrink-0">
                                 <button
                                   onClick={() => handleUpdateFindingStatus(f.id, "REVIEWED")}
                                   disabled={updatingFindingId === f.id || f.status === "REVIEWED"}

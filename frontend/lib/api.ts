@@ -434,6 +434,10 @@ export const AI_PPE_VIOLATION_TYPES = [
   "PERSON_WITHOUT_GOGGLES",
 ] as const;
 
+export const AI_PPE_REVIEW_TYPES = [
+  "PPE_NOT_DETECTED_REVIEW",
+] as const;
+
 export const AI_PPE_COMPLIANCE_TYPES = [
   "HELMET_DETECTED",
   "GLOVES_DETECTED",
@@ -443,10 +447,19 @@ export const AI_PPE_COMPLIANCE_TYPES = [
 ] as const;
 
 export type PPEViolationType = typeof AI_PPE_VIOLATION_TYPES[number];
+export type PPEReviewType = typeof AI_PPE_REVIEW_TYPES[number];
 export type PPEComplianceType = typeof AI_PPE_COMPLIANCE_TYPES[number];
 
 export function isPPEViolation(finding: { finding_type: string }): boolean {
   return (AI_PPE_VIOLATION_TYPES as readonly string[]).includes(finding.finding_type);
+}
+
+export function isPPEReview(finding: { finding_type: string }): boolean {
+  return (AI_PPE_REVIEW_TYPES as readonly string[]).includes(finding.finding_type);
+}
+
+export function isPPEHazardOrReview(finding: { finding_type: string }): boolean {
+  return isPPEViolation(finding) || isPPEReview(finding);
 }
 
 export function isPPECompliance(finding: { finding_type: string }): boolean {

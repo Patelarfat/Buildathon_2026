@@ -79,7 +79,8 @@ def classify_user_intent(query: str) -> str:
         return "OUT_OF_SCOPE"
 
     # 1. DAILY REPORT QUERIES
-    if has_any([
+    # Explicit phrases & semantic pattern: (today / daily) + (report / progress / activity / work / update / what happened / shift / site)
+    is_daily = has_any([
         "generate today's report", "generate the today report", "generate todays report",
         "generate today report", "generate a daily report", "generate daily report",
         "create today's daily report", "create todays daily report", "create today daily report",
@@ -87,28 +88,54 @@ def classify_user_intent(query: str) -> str:
         "today's report", "todays report", "today report", "daily site report", "daily report",
         "today's site progress", "todays site progress", "today site progress",
         "show today's progress", "show todays progress", "show today progress",
-        "today's progress", "todays progress", "today progress",
+        "today's progress", "todays progress", "today progress", "daily progress",
         "what happened today", "today's activity", "todays activity", "today activity",
         "today's activities", "todays activities", "today activities",
-        "today's work", "todays work", "work completed today"
-    ]):
+        "today's work", "todays work", "work completed today", "give me daily report",
+        "give me a daily report", "give me today's report", "give me todays report", "give me today report"
+    ]) or bool(
+        re.search(r'\b(today|todays|today\'s|daily)\b', q) and
+        re.search(r'\b(report|reports|progress|activity|activities|work|update|summary|status|what happened|shift)\b', q)
+    )
+    if is_daily:
         return "DAILY_REPORT"
 
     # 2. WEEKLY PROGRESS REPORT QUERIES
-    if has_any([
+    # Explicit phrases & semantic pattern: (weekly / this week / past week / 7 days) + (report / progress / summary / update / construction / site / what happened)
+    has_issue_specific_keyword = bool(re.search(r'\b(problem|problems|recurring|repeated)\b', q))
+    has_explicit_report_progress = bool(re.search(r'\b(progress|milestone|milestones|work completed|site report|weekly report|weekly progress|daily report)\b', q))
+
+    is_weekly = has_any([
         "generate a weekly site progress report", "generate weekly site progress report",
         "generate a weekly progress report", "generate weekly progress report",
-        "generate weekly report", "generate a weekly report",
+        "generate weekly report", "generate a weekly report", "generate a weekly site report", "generate weekly site report",
         "weekly site progress report", "weekly progress report", "weekly site report", "weekly project report",
+        "weekly report", "weekly reports", "weekly progress", "weekly summary",
+        "give me weekly report", "give me a weekly report", "give me weekly progress", "give me a weekly progress report",
+        "give me this week's report", "give me this weeks report", "give me this week report",
         "give me this week's site progress", "give me this weeks site progress",
+        "show me this week's report", "show me this weeks report", "show this week's report", "show this weeks report",
+        "show this week's progress", "show this weeks progress", "show weekly progress", "show weekly report",
         "summarize this week's construction progress", "summarize this weeks construction progress",
+        "summarize this week's progress", "summarize this weeks progress",
         "summarize weekly progress", "summarize weekly construction progress",
         "create the weekly project report", "create weekly project report",
-        "weekly progress", "weekly summary", "this week's progress", "this weeks progress",
+        "this week's progress", "this weeks progress", "this week progress",
+        "this week's report", "this weeks report", "this week report",
         "week's construction progress", "weeks construction progress",
+        "what happened this week in the project", "what happened this week",
         "overall progress", "project progress", "construction progress",
         "progress report", "progress update", "site progress report"
-    ]):
+    ]) or (
+        bool(
+            re.search(r'\b(weekly|this\s+week|this\s+week\'s|this\s+weeks|past\s+week|last\s+7\s+days|7-day|7\s+days)\b', q) and
+            (
+                re.search(r'\b(report|reports|progress|summary|update|activity|activities|work|milestone|milestones|status|construction|site|project|what happened)\b', q) or
+                len(q.split()) <= 4
+            )
+        ) and (not has_issue_specific_keyword or has_explicit_report_progress)
+    )
+    if is_weekly:
         return "WEEKLY_PROGRESS_REPORT"
 
     # 3. RECURRING ISSUES
