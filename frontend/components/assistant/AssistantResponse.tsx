@@ -43,11 +43,11 @@ export default function AssistantResponse({
     const qType = (structured.query_type || "GENERAL").toUpperCase();
     const isMaterialQuery = qType === "MATERIALS" || qType === "MATERIAL";
     const isPPEQuery = qType === "PPE";
-    const isProgressQuery = qType === "PROGRESS";
-    const isAreaQuery = qType === "AREA";
-    const isRiskQuery = qType === "RISK";
+    const isProgressQuery = qType === "PROGRESS" || qType === "DAILY_REPORT" || qType === "WEEKLY_PROGRESS_REPORT";
+    const isAreaQuery = qType === "AREA" || qType === "AREA_SAFETY";
+    const isRiskQuery = qType === "RISK" || qType === "SAFETY_RISK";
     const isActionsQuery = qType === "RECOMMENDED_ACTIONS";
-    const isSafetyQuery = qType === "SAFETY_INCIDENTS";
+    const isSafetyQuery = qType === "SAFETY_INCIDENTS" || qType === "ISSUES_SUMMARY" || qType === "RECURRING_ISSUES";
 
     const displaySources = (structured.sources && structured.sources.length > 0)
       ? structured.sources

@@ -28,17 +28,22 @@ logger = logging.getLogger(__name__)
 
 def classify_user_intent(query: str) -> str:
     """
-    Deterministic intent classifier prioritizing specific domains over generic ones.
+    Deterministic intent classifier prioritizing specific domains and reports over generic ones.
     Returns one of:
-    - MATERIALS
+    - DAILY_REPORT
+    - WEEKLY_PROGRESS_REPORT
+    - RECURRING_ISSUES
+    - ISSUES_SUMMARY
+    - AREA_SAFETY
+    - SAFETY_RISK
     - SAFETY_INCIDENTS
     - RECOMMENDED_ACTIONS
     - PPE
-    - PROGRESS
-    - AREA
     - INSPECTIONS
     - OBSERVATIONS
-    - RISK
+    - MATERIALS
+    - GREETING
+    - OUT_OF_SCOPE
     - GENERAL_PROJECT
     """
     q = query.lower().strip()
@@ -73,7 +78,82 @@ def classify_user_intent(query: str) -> str:
     ]):
         return "OUT_OF_SCOPE"
 
-    # 1. Recommended Actions & Role Assignments (Explicit Manager Instructions)
+    # 1. DAILY REPORT QUERIES
+    if has_any([
+        "generate today's report", "generate the today report", "generate todays report",
+        "generate today report", "generate a daily report", "generate daily report",
+        "create today's daily report", "create todays daily report", "create today daily report",
+        "today's site report", "todays site report", "today site report",
+        "today's report", "todays report", "today report", "daily site report", "daily report",
+        "today's site progress", "todays site progress", "today site progress",
+        "show today's progress", "show todays progress", "show today progress",
+        "today's progress", "todays progress", "today progress",
+        "what happened today", "today's activity", "todays activity", "today activity",
+        "today's activities", "todays activities", "today activities",
+        "today's work", "todays work", "work completed today"
+    ]):
+        return "DAILY_REPORT"
+
+    # 2. WEEKLY PROGRESS REPORT QUERIES
+    if has_any([
+        "generate a weekly site progress report", "generate weekly site progress report",
+        "generate a weekly progress report", "generate weekly progress report",
+        "generate weekly report", "generate a weekly report",
+        "weekly site progress report", "weekly progress report", "weekly site report", "weekly project report",
+        "give me this week's site progress", "give me this weeks site progress",
+        "summarize this week's construction progress", "summarize this weeks construction progress",
+        "summarize weekly progress", "summarize weekly construction progress",
+        "create the weekly project report", "create weekly project report",
+        "weekly progress", "weekly summary", "this week's progress", "this weeks progress",
+        "week's construction progress", "weeks construction progress",
+        "overall progress", "project progress", "construction progress",
+        "progress report", "progress update", "site progress report"
+    ]):
+        return "WEEKLY_PROGRESS_REPORT"
+
+    # 3. RECURRING ISSUES
+    if has_any([
+        "which issues have occurred repeatedly", "which problems have occurred repeatedly",
+        "what are the recurring problems", "what are the recurring issues",
+        "recurring problem", "recurring problems", "recurring issue", "recurring issues",
+        "recurring hazard", "recurring hazards", "occurred repeatedly", "happened repeatedly",
+        "repeated issues", "repeated problems", "frequent issues", "frequent problems"
+    ]):
+        return "RECURRING_ISSUES"
+
+    # 4. ISSUES SUMMARY / PROBLEMS THIS WEEK
+    if has_any([
+        "summarize the problems reported this week", "summarize problems reported this week",
+        "show issues from this week", "show problems from this week",
+        "problems reported this week", "issues reported this week",
+        "problems this week", "issues this week", "summary of problems",
+        "summary of issues", "list of problems", "site issues summary"
+    ]):
+        return "ISSUES_SUMMARY"
+
+    # 5. AREA SAFETY & ZONE ISSUES
+    if has_any([
+        "what safety issues were found in", "show safety issues in", "safety issues in",
+        "safety incidents in", "incidents in", "hazards in", "issues in area",
+        "which area needs attention", "which area needs", "what area needs", "zone needs",
+        "worst area", "area ranking", "affected area", "affected areas", "high risk area",
+        "building block", "which area", "what area"
+    ]):
+        return "AREA_SAFETY"
+
+    # 6. SAFETY RISK / RISK ASSESSMENT
+    if has_any([
+        "what are the top safety risks", "top safety risks", "top safety risk",
+        "why is the project risk high", "why is the project risk medium", "why is the project risk critical",
+        "why is project risk high", "why is project risk medium", "why is project risk critical",
+        "why is the project risk", "why is project risk", "show current safety risks", "current safety risks",
+        "which areas are high risk", "risk score", "risk level", "why risk", "high risk", "medium risk",
+        "critical risk", "what is the project risk", "what is the risk", "risk factors", "explain risk",
+        "how is risk", "risk assessment", "safety risk", "major risk", "major risks"
+    ]):
+        return "SAFETY_RISK"
+
+    # 7. Recommended Actions & Role Assignments (Explicit Manager Instructions)
     if has_any([
         "what are the recommended actions", "recommended action", "recommended actions",
         "what should we do", "recommendation", "recommendations", "next step", "next steps",
@@ -86,35 +166,35 @@ def classify_user_intent(query: str) -> str:
     ]):
         return "RECOMMENDED_ACTIONS"
 
-    # 2. Safety Incidents & Accidents
+    # 8. Safety Incidents & Accidents
     if has_any([
-        "incident", "incidents", "accident", "accidents", "unresolved incident",
-        "open incident", "safety incident", "safety incidents", "safety issue", "safety issues",
-        "near miss", "injury", "hazard", "unsafe condition"
+        "incident", "incidents", "accident", "accidents", "unresolved incident", "unresolved incidents",
+        "open incident", "open incidents", "show unresolved incidents", "safety incident", "safety incidents",
+        "safety issue", "safety issues", "near miss", "injury", "hazard", "unsafe condition"
     ]):
         return "SAFETY_INCIDENTS"
 
-    # 3. PPE & Computer Vision
+    # 9. PPE & Computer Vision
     if has_any([
         "ppe", "helmet", "hard hat", "gloves", "boots", "goggles", "vest",
         "protective equipment", "safety gear", "ppe violation", "ppe compliance"
     ]):
         return "PPE"
 
-    # 4. Inspections & Audits
+    # 10. Inspections & Audits
     if has_any([
         "inspection", "inspections", "failed inspection", "audit", "safety audit",
         "quality audit", "checklist", "inspector"
     ]):
         return "INSPECTIONS"
 
-    # 5. Observations & Hazards
+    # 11. Observations & Hazards
     if has_any([
         "observation", "observations", "snag", "defect", "site observation", "hazard note"
     ]):
         return "OBSERVATIONS"
 
-    # 6. Materials & Supply Chain
+    # 12. Materials & Supply Chain
     if has_any([
         "material", "materials", "shortage", "shortages", "stock", "supply",
         "supplier", "delivery", "delayed material", "blocking work", "rebar",
@@ -122,24 +202,8 @@ def classify_user_intent(query: str) -> str:
     ]):
         return "MATERIALS"
 
-    # 8. Area & Spatial Intelligence
-    if has_any([
-        "which area", "what area", "area needs", "zone needs", "worst area",
-        "area ranking", "affected area", "affected areas", "high risk area", "building block"
-    ]):
-        return "AREA"
-
-    # 9. Risk & Analytics
-    if has_any([
-        "why is the project risk", "why is project risk", "risk score", "risk level",
-        "why risk", "high risk", "medium risk", "critical risk", "what is the project risk",
-        "what is the risk", "risk factors", "explain risk", "how is risk", "risk assessment",
-        "safety risk", "major risk", "major risks", "top safety risks"
-    ]):
-        return "RISK"
-
-    # 10. General Project Overview
-    return "GENERAL_PROJECT"
+    # 13. General Project Overview (Default)
+    return "GENERAL_PROJECT_QUERY"
 
 
 def _parse_time_intent(query: str) -> Optional[Tuple[datetime, Optional[datetime]]]:
@@ -238,18 +302,20 @@ def retrieve_assistant_context(
     source_type_filters = None
     if intent == "MATERIALS":
         source_type_filters = ["MATERIAL"]
-    elif intent in ["SAFETY_INCIDENTS", "RECOMMENDED_ACTIONS"]:
+    elif intent in ["SAFETY_INCIDENTS", "SAFETY_RISK", "RECOMMENDED_ACTIONS"]:
         source_type_filters = ["INCIDENT", "INSPECTION"]
     elif intent == "INSPECTIONS":
         source_type_filters = ["INSPECTION"]
     elif intent == "OBSERVATIONS":
         source_type_filters = ["OBSERVATION"]
-    elif intent == "PROGRESS":
+    elif intent in ["DAILY_REPORT", "WEEKLY_PROGRESS_REPORT"]:
         source_type_filters = ["DAILY_REPORT"]
     elif intent == "PPE":
         source_type_filters = ["PHOTO", "AI_FINDING", "INCIDENT"]
-    elif intent == "AREA":
-        source_type_filters = ["AREA", "INCIDENT", "INSPECTION"]
+    elif intent in ["AREA_SAFETY", "RECURRING_ISSUES"]:
+        source_type_filters = ["AREA", "INCIDENT", "OBSERVATION", "INSPECTION"]
+    elif intent == "ISSUES_SUMMARY":
+        source_type_filters = ["INCIDENT", "OBSERVATION", "INSPECTION", "DAILY_REPORT"]
 
     semantic_matches = []
     try:
@@ -287,22 +353,165 @@ def retrieve_assistant_context(
         models.SafetyIncident.status.in_(["OPEN", "UNDER_REVIEW"])
     ).scalar() or 0
 
-    context_sections.append(
-        f"PROJECT METADATA & AUTHORITATIVE RISK ENGINE:\n"
-        f"- Project Name: {project.name}\n"
-        f"- Project Status: {project.status}\n"
-        f"- Authoritative Risk Score: {risk_score}/100 ({risk_level})\n"
-        f"- Data Confidence: {risk_eval.get('data_confidence', 'HIGH')}\n"
-        f"- Contributing Risk Factors:\n" + "\n".join([f"  * {r}" for r in risk_reasons])
-    )
+    if intent in ["SAFETY_RISK", "RISK", "GENERAL_PROJECT_QUERY", "RECOMMENDED_ACTIONS"]:
+        context_sections.append(
+            f"PROJECT METADATA & AUTHORITATIVE RISK ENGINE:\n"
+            f"- Project Name: {project.name}\n"
+            f"- Project Status: {project.status}\n"
+            f"- Authoritative Risk Score: {risk_score}/100 ({risk_level})\n"
+            f"- Data Confidence: {risk_eval.get('data_confidence', 'HIGH')}\n"
+            f"- Contributing Risk Factors:\n" + "\n".join([f"  * {r}" for r in risk_reasons])
+        )
 
-    context_sections.append(
-        f"EXACT FACTS & RECORD COUNTS (SQL):\n"
-        f"- Unresolved Safety Incidents: {open_incidents_count}"
-    )
+    # A. DAILY REPORT INTENT
+    if intent == "DAILY_REPORT":
+        today_str = datetime.utcnow().strftime("%Y-%m-%d")
+        all_reps = (
+            db.query(models.DailyReport)
+            .filter(models.DailyReport.project_id == project_id)
+            .order_by(models.DailyReport.report_date.desc())
+            .all()
+        )
+        today_reps = [r for r in all_reps if r.report_date == today_str]
+        chosen_reps = today_reps if today_reps else (all_reps[:1] if all_reps else [])
+        
+        rep_bullets = []
+        if today_reps:
+            rep_bullets.append(f"STATUS: Stored daily report(s) found for today ({today_str}).")
+        elif all_reps:
+            rep_bullets.append(f"STATUS: No daily report has been submitted for today ({today_str}). Showing latest available report ({all_reps[0].report_date}).")
+        else:
+            rep_bullets.append("STATUS: No daily reports recorded in project database.")
 
-    # A. MATERIALS QUERY
-    if intent == "MATERIALS":
+        for r in chosen_reps:
+            site_n = r.site.name if r.site else "Site"
+            area_n = r.area.name if r.area else "Area"
+            rep_bullets.append(
+                f"- Daily Report #{r.id} (Date: {r.report_date}, Site: {site_n}, Area: {area_n}):\n"
+                f"  * Progress: {r.progress_percentage if r.progress_percentage is not None else 'Not reported'}%\n"
+                f"  * Workers Active: {r.workers_count if r.workers_count is not None else 'Not reported'}\n"
+                f"  * Weather: {r.weather or 'Not reported'}\n"
+                f"  * Work Completed: {r.work_completed or 'Not reported'}\n"
+                f"  * Planned Work / Next Shift: {r.work_planned or 'Not reported'}\n"
+                f"  * Equipment Used: {r.equipment_used or 'Not reported'}\n"
+                f"  * Materials Used: {r.materials_used or 'Not reported'}\n"
+                f"  * Issues/Delays: {r.issues or 'Not reported'}\n"
+                f"  * Blockers: {r.blockers or 'Not reported'}\n"
+                f"  * Notes: {r.notes or 'Not reported'}"
+            )
+            add_source("DAILY_REPORT", str(r.id), f"Daily Report — {r.report_date}", f"{site_n} · {r.workers_count or 0} workers")
+            data_used.append("daily_reports")
+
+        context_sections.append("DAILY REPORT DETAIL (SQL):\n" + "\n".join(rep_bullets))
+
+        # Include safety snapshot
+        open_incs = db.query(models.SafetyIncident).filter(
+            models.SafetyIncident.project_id == project_id,
+            models.SafetyIncident.status.in_(["OPEN", "UNDER_REVIEW"])
+        ).count()
+        open_obs = db.query(models.Observation).filter(
+            models.Observation.project_id == project_id,
+            models.Observation.status != "RESOLVED"
+        ).count()
+        failed_insps = db.query(models.InspectionReport).filter(
+            models.InspectionReport.project_id == project_id,
+            models.InspectionReport.status == "FAILED"
+        ).count()
+        context_sections.append(
+            f"SAFETY SNAPSHOT:\n"
+            f"- Open Safety Incidents: {open_incs}\n"
+            f"- Open Hazard Observations: {open_obs}\n"
+            f"- Failed Inspections: {failed_insps}"
+        )
+
+    # B. WEEKLY PROGRESS REPORT INTENT
+    elif intent == "WEEKLY_PROGRESS_REPORT":
+        all_reps = (
+            db.query(models.DailyReport)
+            .filter(models.DailyReport.project_id == project_id)
+            .order_by(models.DailyReport.report_date.desc())
+            .limit(7)
+            .all()
+        )
+        rep_bullets = []
+        if all_reps:
+            period_str = f"{all_reps[-1].report_date} to {all_reps[0].report_date}" if len(all_reps) > 1 else all_reps[0].report_date
+            rep_bullets.append(f"REPORTING PERIOD: {period_str} ({len(all_reps)} daily report(s) retrieved)")
+            for r in all_reps:
+                site_n = r.site.name if r.site else "Site"
+                area_n = r.area.name if r.area else "Area"
+                rep_bullets.append(
+                    f"- Report #{r.id} ({r.report_date} at {site_n} - {area_n}): Progress: {r.progress_percentage if r.progress_percentage is not None else 'Not reported'}%, Workers: {r.workers_count if r.workers_count is not None else 'Not reported'}, Weather: {r.weather or 'Not reported'}, Work Completed: {r.work_completed or 'Not reported'}, Work Planned: {r.work_planned or 'Not reported'}, Equipment: {r.equipment_used or 'Not reported'}, Materials: {r.materials_used or 'Not reported'}, Issues: {r.issues or 'Not reported'}, Blockers: {r.blockers or 'Not reported'}"
+                )
+                add_source("DAILY_REPORT", str(r.id), f"Daily Report — {r.report_date}", f"{site_n} · {area_n} · {r.workers_count or 0} workers")
+                data_used.append("daily_reports")
+        else:
+            rep_bullets.append("No daily reports found in the project database for the reporting period.")
+
+        context_sections.append("WEEKLY DAILY REPORTS BREAKDOWN (SQL):\n" + "\n".join(rep_bullets))
+
+        # Materials detail for weekly report
+        mat_records = db.query(models.Material).filter(models.Material.project_id == project_id).limit(6).all()
+        if mat_records:
+            mat_lines = [f"- {m.material_name}: {m.quantity} {m.unit} (Status: {m.status}, Supplier: {m.supplier or 'Not reported'})" for m in mat_records]
+            context_sections.append("PROJECT MATERIALS USED / IN STOCK (SQL):\n" + "\n".join(mat_lines))
+
+        # Safety & Quality summary
+        open_incs = db.query(models.SafetyIncident).filter(
+            models.SafetyIncident.project_id == project_id,
+            models.SafetyIncident.status.in_(["OPEN", "UNDER_REVIEW"])
+        ).all()
+        inc_lines = [f"- Incident #{i.id}: {i.incident_type} ({i.severity}, Status: {i.status}) - {i.description}" for i in open_incs]
+        context_sections.append(
+            f"SAFETY & QUALITY SUMMARY (SQL):\n"
+            f"- Open Safety Incidents ({len(open_incs)}):\n" + ("\n".join(inc_lines) if inc_lines else "  * None")
+        )
+
+    # C. RECURRING ISSUES INTENT
+    elif intent == "RECURRING_ISSUES":
+        rec_issues = RecurringIssueService.detect_recurring_issues(db=db, project_id=project_id, days=14, threshold=2)
+        rec_bullets = []
+        for r in rec_issues:
+            site_n = r.get("site_name") or "Site"
+            area_n = r.get("area_name") or "Area"
+            rec_bullets.append(
+                f"- Recurring Problem: {r.get('title')} at {site_n} -> {area_n} ({r.get('count')} occurrences, Severity: {r.get('severity')}). Description: {r.get('description')}"
+            )
+            add_source("RECURRING", f"{r.get('area_name')}_{r.get('title')}", f"Recurring: {r.get('title')}", f"{r.get('count')} occurrences at {area_n}")
+            data_used.append("recurring_issues")
+
+        if rec_bullets:
+            context_sections.append("RECURRING SITE PROBLEMS (SQL):\n" + "\n".join(rec_bullets))
+        else:
+            context_sections.append("RECURRING SITE PROBLEMS (SQL):\n- No recurring issues (>= 2 occurrences) detected across project zones.")
+
+    # D. ISSUES SUMMARY INTENT
+    elif intent == "ISSUES_SUMMARY":
+        inc_q = db.query(models.SafetyIncident).filter(models.SafetyIncident.project_id == project_id).order_by(models.SafetyIncident.id.desc()).limit(6).all()
+        obs_q = db.query(models.Observation).filter(models.Observation.project_id == project_id).order_by(models.Observation.id.desc()).limit(6).all()
+        insp_q = db.query(models.InspectionReport).filter(models.InspectionReport.project_id == project_id, models.InspectionReport.status == "FAILED").order_by(models.InspectionReport.id.desc()).limit(6).all()
+
+        issue_lines = []
+        for inc in inc_q:
+            area_n = inc.area.name if inc.area else "Site"
+            issue_lines.append(f"- Safety Incident #{inc.id} ({inc.severity}, Status: {inc.status}) in {area_n}: {inc.description}")
+            add_source("INCIDENT", str(inc.id), f"Incident #{inc.id}: {inc.incident_type}", f"{inc.severity} · {inc.status}")
+        for obs in obs_q:
+            area_n = obs.area.name if obs.area else "Site"
+            issue_lines.append(f"- Observation #{obs.id} [{obs.priority}, Status: {obs.status}] in {area_n}: {obs.title} - {obs.description}")
+            add_source("OBSERVATION", str(obs.id), f"Observation #{obs.id}: {obs.title}", f"{obs.priority} · {obs.status}")
+        for insp in insp_q:
+            area_n = insp.area.name if insp.area else "Site"
+            issue_lines.append(f"- Failed Inspection #{insp.id} ({insp.inspection_type}) in {area_n}: {insp.findings or 'Failed audit'}")
+            add_source("INSPECTION", str(insp.id), f"Inspection #{insp.id}: {insp.inspection_type}", f"Status: FAILED")
+
+        if issue_lines:
+            context_sections.append("PROJECT ISSUES & PROBLEMS SUMMARY (SQL):\n" + "\n".join(issue_lines))
+        else:
+            context_sections.append("PROJECT ISSUES & PROBLEMS SUMMARY (SQL):\n- No active site issues or safety problems recorded.")
+
+    # E. MATERIALS QUERY
+    elif intent == "MATERIALS":
         mat_q = db.query(models.Material).filter(models.Material.project_id == project_id)
         mat_records = mat_q.order_by(models.Material.id.desc()).limit(10).all()
         mat_bullets = []
@@ -318,8 +527,8 @@ def retrieve_assistant_context(
         else:
             context_sections.append("MATERIALS & INVENTORY DETAIL (SQL):\n- No material records or shortages found in project database.")
 
-    # B. SAFETY INCIDENTS / RISK QUERY
-    elif intent in ["SAFETY_INCIDENTS", "RISK", "RECOMMENDED_ACTIONS"]:
+    # F. SAFETY INCIDENTS / SAFETY RISK / RECOMMENDED ACTIONS / AREA SAFETY
+    elif intent in ["SAFETY_INCIDENTS", "SAFETY_RISK", "RECOMMENDED_ACTIONS", "AREA_SAFETY"]:
         inc_q = db.query(models.SafetyIncident).filter(models.SafetyIncident.project_id == project_id)
         if matched_area_ids:
             inc_q = inc_q.filter(models.SafetyIncident.area_id.in_(matched_area_ids))
@@ -337,10 +546,10 @@ def retrieve_assistant_context(
         if inc_bullets:
             context_sections.append("SAFETY INCIDENTS DETAIL (SQL):\n" + "\n".join(inc_bullets))
         else:
-            context_sections.append("SAFETY INCIDENTS DETAIL (SQL):\n- No unresolved safety incidents recorded.")
+            context_sections.append("SAFETY INCIDENTS DETAIL (SQL):\n- No safety incidents recorded matching criteria.")
 
         # Also load failed inspections if risk or actions
-        if intent in ["RISK", "RECOMMENDED_ACTIONS"]:
+        if intent in ["SAFETY_RISK", "RECOMMENDED_ACTIONS"]:
             insp_q = db.query(models.InspectionReport).filter(
                 models.InspectionReport.project_id == project_id,
                 models.InspectionReport.status == "FAILED"
@@ -363,7 +572,7 @@ def retrieve_assistant_context(
                 team_lines = [f"- {pm.user.name} ({pm.role.replace('_', ' ').title()})" for pm in team_members]
                 context_sections.append("PROJECT TEAM MEMBERS & ROLES (SQL):\n" + "\n".join(team_lines))
 
-    # C. INSPECTIONS QUERY
+    # G. INSPECTIONS QUERY
     elif intent == "INSPECTIONS":
         insp_q = db.query(models.InspectionReport).filter(models.InspectionReport.project_id == project_id)
         if matched_area_ids:
@@ -382,7 +591,7 @@ def retrieve_assistant_context(
         else:
             context_sections.append("INSPECTION REPORTS DETAIL (SQL):\n- No inspection reports found.")
 
-    # D. OBSERVATIONS QUERY
+    # H. OBSERVATIONS QUERY
     elif intent == "OBSERVATIONS":
         obs_q = db.query(models.Observation).filter(models.Observation.project_id == project_id)
         if matched_area_ids:
@@ -401,23 +610,7 @@ def retrieve_assistant_context(
         else:
             context_sections.append("SITE OBSERVATIONS DETAIL (SQL):\n- No open observations found.")
 
-    # E. PROGRESS QUERY
-    elif intent == "PROGRESS":
-        rep_q = db.query(models.DailyReport).filter(models.DailyReport.project_id == project_id)
-        rep_records = rep_q.order_by(models.DailyReport.report_date.desc()).limit(5).all()
-        rep_bullets = []
-        for r in rep_records:
-            rep_bullets.append(
-                f"- Daily Report #{r.id} ({r.report_date}): Completed: {r.work_completed or 'N/A'}, Workforce: {r.workers_count or 0} workers, Weather: {r.weather or 'Clear'}, Blockers: {r.blockers or 'None'}, Notes: {r.notes or 'None'}"
-            )
-            add_source("DAILY_REPORT", str(r.id), f"Daily Report ({r.report_date})", f"{r.workers_count or 0} workers · Progress {r.progress_percentage or 0}%")
-            data_used.append("daily_reports")
-        if rep_bullets:
-            context_sections.append("DAILY PROGRESS & WORKFORCE DETAIL (SQL):\n" + "\n".join(rep_bullets))
-        else:
-            context_sections.append("DAILY PROGRESS & WORKFORCE DETAIL (SQL):\n- No daily report logs recorded.")
-
-    # F. PPE QUERY
+    # I. PPE QUERY
     elif intent == "PPE":
         ai_violations_count = db.query(func.count(models.AISafetyFinding.id)).filter(
             models.AISafetyFinding.project_id == project_id,
@@ -438,7 +631,7 @@ def retrieve_assistant_context(
         add_source("PPE", "ppe_vision", "AI PPE Vision Detection", f"Compliance: {ai_compliance_count} · Violations: {ai_violations_count}")
         data_used.append("ppe_vision")
 
-    # G. AREA QUERY / GENERAL PROJECT
+    # J. GENERAL PROJECT OVERVIEW
     else:
         # Load summary of all domains
         open_incidents_count = db.query(func.count(models.SafetyIncident.id)).filter(
