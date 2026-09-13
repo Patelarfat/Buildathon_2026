@@ -887,11 +887,104 @@ export interface AssistantSource {
   detail?: string;
 }
 
+export interface AssistantRiskInfo {
+  score: number;
+  level: string;
+  factors: string[];
+  summary?: string | null;
+}
+
+export interface AssistantAttentionItem {
+  id?: string | null;
+  title: string;
+  description?: string | null;
+  severity: string;
+  category?: string | null;
+  status?: string | null;
+  site_name?: string | null;
+  area_name?: string | null;
+  action_taken?: string | null;
+}
+
+export interface AssistantLocationItem {
+  site_name?: string | null;
+  area_name?: string | null;
+  risk_score?: number | null;
+  risk_level?: string | null;
+  issue_summary?: string | null;
+}
+
+export interface AssistantActionItem {
+  title: string;
+  description?: string | null;
+  priority: string;
+  category?: string | null;
+  role?: string | null;
+}
+
+export interface AssistantMaterialItem {
+  name: string;
+  status: string;
+  quantity?: number | null;
+  unit?: string | null;
+  category?: string | null;
+  supplier?: string | null;
+  notes?: string | null;
+}
+
+export interface AssistantProgressInfo {
+  progress_pct?: number | null;
+  workers_count?: number | null;
+  work_completed?: string | null;
+  weather?: string | null;
+  blockers?: string | null;
+}
+
+export interface AssistantPPEInfo {
+  compliance_count: number;
+  violations_count: number;
+  compliance_pct: number;
+  violations_list: string[];
+  compliance_items: string[];
+}
+
+export interface AssistantPipelineStep {
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export interface AssistantExplainability {
+  retrieval_mode: string;
+  sql_facts_count: number;
+  semantic_chunks_count: number;
+  risk_engine_score: number;
+  risk_engine_level: string;
+  llm_model: string;
+  pipeline_steps: AssistantPipelineStep[];
+}
+
+export interface AssistantStructuredResponse {
+  query_type: string;
+  executive_summary: string;
+  risk?: AssistantRiskInfo | null;
+  attention_items: AssistantAttentionItem[];
+  locations: AssistantLocationItem[];
+  recommended_actions: AssistantActionItem[];
+  materials: AssistantMaterialItem[];
+  progress?: AssistantProgressInfo | null;
+  ppe?: AssistantPPEInfo | null;
+  sources: AssistantSource[];
+  explainability: AssistantExplainability;
+  suggested_followups: string[];
+}
+
 export interface AssistantChatResponse {
   project_id: number;
   answer: string;
   sources: AssistantSource[];
   data_used: string[];
+  structured?: AssistantStructuredResponse | null;
 }
 
 export const chatWithAssistant = (projectId: number, message: string) =>
@@ -899,3 +992,34 @@ export const chatWithAssistant = (projectId: number, message: string) =>
     method: "POST",
     body: JSON.stringify({ message }),
   });
+
+// --- Phase 8: Hybrid RAG API ---
+export interface RAGIndexResponse {
+  status: string;
+  project_id: number;
+  project_name: string;
+  total_indexed: number;
+  breakdown: Record<string, number>;
+}
+
+export interface RAGStatusResponse {
+  project_id: number;
+  total_documents: number;
+  by_source_type: Record<string, number>;
+  embedding_provider: {
+    provider: string;
+    dimension: number;
+    is_external: boolean;
+    fallback_available: boolean;
+  };
+  last_indexed_at?: string | null;
+}
+
+export const indexProjectRAG = (projectId: number) =>
+  request<RAGIndexResponse>(`/api/projects/${projectId}/rag/index`, {
+    method: "POST",
+  });
+
+export const getProjectRAGStatus = (projectId: number) =>
+  request<RAGStatusResponse>(`/api/projects/${projectId}/rag/status`);
+

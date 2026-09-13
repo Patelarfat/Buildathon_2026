@@ -23,7 +23,9 @@ from routers import (
     intelligence,
     dashboard,
     assistant,
+    rag,
 )
+from services.rag import register_rag_listeners
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,6 +42,12 @@ async def lifespan(app: FastAPI):
         logger.info("Database tables verified/created successfully.")
     except Exception as e:
         logger.warning(f"Database connection not available at startup: {e}")
+
+    try:
+        register_rag_listeners()
+    except Exception as e:
+        logger.warning(f"Could not register RAG listeners: {e}")
+
     yield
 
 
@@ -81,6 +89,7 @@ app.include_router(ai.router)
 app.include_router(intelligence.router)
 app.include_router(dashboard.router)
 app.include_router(assistant.router)
+app.include_router(rag.router)
 
 
 

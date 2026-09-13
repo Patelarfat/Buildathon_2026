@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -1034,8 +1034,133 @@ class AssistantChatRequest(BaseModel):
     message: str = Field(..., max_length=2000, description="Project management natural language query")
 
 
+class AssistantRiskInfo(BaseModel):
+    score: int
+    level: str
+    factors: List[str] = []
+    summary: Optional[str] = None
+
+
+class AssistantAttentionItem(BaseModel):
+    id: Optional[str] = None
+    title: str
+    description: Optional[str] = None
+    severity: str = "MEDIUM"
+    category: Optional[str] = None
+    status: Optional[str] = "OPEN"
+    site_name: Optional[str] = None
+    area_name: Optional[str] = None
+    action_taken: Optional[str] = None
+
+
+class AssistantLocationItem(BaseModel):
+    site_name: Optional[str] = None
+    area_name: Optional[str] = None
+    risk_score: Optional[int] = None
+    risk_level: Optional[str] = None
+    issue_summary: Optional[str] = None
+
+
+class AssistantActionItem(BaseModel):
+    title: str
+    description: Optional[str] = None
+    priority: str = "STANDARD"
+    category: Optional[str] = None
+    role: Optional[str] = None
+
+
+class AssistantMaterialItem(BaseModel):
+    name: str
+    status: str
+    quantity: Optional[float] = None
+    unit: Optional[str] = None
+    category: Optional[str] = None
+    supplier: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class AssistantProgressInfo(BaseModel):
+    progress_pct: Optional[int] = None
+    workers_count: Optional[int] = None
+    work_completed: Optional[str] = None
+    weather: Optional[str] = None
+    blockers: Optional[str] = None
+
+
+class AssistantPPEInfo(BaseModel):
+    compliance_count: int = 0
+    violations_count: int = 0
+    compliance_pct: float = 100.0
+    violations_list: List[str] = []
+    compliance_items: List[str] = []
+
+
+class AssistantPipelineStep(BaseModel):
+    name: str
+    description: str
+    icon: str
+
+
+class AssistantExplainability(BaseModel):
+    retrieval_mode: str = "HYBRID_RAG"
+    sql_facts_count: int = 0
+    semantic_chunks_count: int = 0
+    risk_engine_score: int = 0
+    risk_engine_level: str = "LOW"
+    llm_model: str = "Gemini 2.5 Flash"
+    pipeline_steps: List[AssistantPipelineStep] = []
+
+
+class AssistantStructuredResponse(BaseModel):
+    query_type: str = "GENERAL"
+    executive_summary: str
+    risk: Optional[AssistantRiskInfo] = None
+    attention_items: List[AssistantAttentionItem] = []
+    locations: List[AssistantLocationItem] = []
+    recommended_actions: List[AssistantActionItem] = []
+    materials: List[AssistantMaterialItem] = []
+    progress: Optional[AssistantProgressInfo] = None
+    ppe: Optional[AssistantPPEInfo] = None
+    sources: List[AssistantSource] = []
+    explainability: AssistantExplainability
+    suggested_followups: List[str] = []
+
+
 class AssistantChatResponse(BaseModel):
     project_id: int
     answer: str
     sources: List[AssistantSource] = []
     data_used: List[str] = []
+    structured: Optional[AssistantStructuredResponse] = None
+
+
+# ==========================================
+# PHASE 8: HYBRID RAG SCHEMAS
+# ==========================================
+
+class RAGIndexResponse(BaseModel):
+    status: str
+    project_id: int
+    project_name: str
+    total_indexed: int
+    breakdown: Dict[str, int] = {}
+
+
+class RAGStatusResponse(BaseModel):
+    project_id: int
+    total_documents: int
+    by_source_type: Dict[str, int] = {}
+    embedding_provider: Dict[str, Any] = {}
+    last_indexed_at: Optional[str] = None
+
+
+class RAGSearchResultItem(BaseModel):
+    doc_id: int
+    project_id: int
+    source_type: str
+    source_id: int
+    title: Optional[str] = None
+    content: str
+    similarity: float
+    metadata: Dict[str, Any] = {}
+

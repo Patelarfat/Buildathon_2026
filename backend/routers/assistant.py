@@ -6,6 +6,7 @@ from database import get_db
 import schemas
 import models
 from services.assistant_context import retrieve_assistant_context
+from services.assistant_structured_service import build_structured_assistant_response
 from services.llm.client import LLMClient
 
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ def chat_with_assistant(
     """
     Natural Language Project Management Assistant endpoint.
     Retrieves targeted, grounded project data from PostgreSQL and uses LLM to provide
-    verifiable, factually grounded answers with source citations.
+    verifiable, factually grounded answers with source citations and structured UI data.
     """
     cleaned_message = request.message.strip()
     if not cleaned_message:
@@ -66,9 +67,25 @@ def chat_with_assistant(
         logger.error(f"LLM generation failed for project {project_id}: {e}")
         answer = "The AI assistant is temporarily unavailable. You can still use the project intelligence dashboard."
 
+    # 3. Build deterministic, typed structured UI response
+    structured_data = None
+    try:
+        structured_data = build_structured_assistant_response(
+            db=db,
+            project_id=project_id,
+            query=cleaned_message,
+            raw_answer=answer,
+            data_used=data_used,
+            project_name=project_name
+        )
+    except Exception as e:
+        logger.error(f"Error building structured assistant response: {e}")
+
     return schemas.AssistantChatResponse(
         project_id=project_id,
         answer=answer,
-        sources=sources,
-        data_used=data_used
+        sources=structured_data.sources if structured_data else sources,
+        data_used=data_used,
+        structured=structured_data
     )
+

@@ -72,6 +72,7 @@ class Project(Base):
     inspections = relationship("InspectionReport", back_populates="project", cascade="all, delete-orphan", order_by="InspectionReport.id.desc()")
     observations = relationship("Observation", back_populates="project", cascade="all, delete-orphan", order_by="Observation.id.desc()")
     materials = relationship("Material", back_populates="project", cascade="all, delete-orphan", order_by="Material.id.desc()")
+    rag_documents = relationship("RAGDocument", back_populates="project", cascade="all, delete-orphan", order_by="RAGDocument.id.desc()")
 
 
 class Site(Base):
@@ -458,5 +459,31 @@ class RecurringIssue(Base):
     project = relationship("Project")
     site = relationship("Site")
     area = relationship("Area")
+
+
+class RAGDocument(Base):
+    __tablename__ = "rag_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    site_id = Column(Integer, ForeignKey("sites.id", ondelete="CASCADE"), nullable=True, index=True)
+    area_id = Column(Integer, ForeignKey("areas.id", ondelete="SET NULL"), nullable=True, index=True)
+    source_type = Column(String(50), nullable=False, index=True)  # PROJECT, SITE, AREA, DAILY_REPORT, INCIDENT, INSPECTION, OBSERVATION, MATERIAL, AI_FINDING, PHOTO
+    source_id = Column(Integer, nullable=False, index=True)
+    title = Column(String(255), nullable=True)
+    content = Column(Text, nullable=False)
+    metadata_json = Column(Text, nullable=True)
+    embedding = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    project = relationship("Project", back_populates="rag_documents")
+    site = relationship("Site")
+    area = relationship("Area")
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "source_type", "source_id", name="uq_rag_document_source"),
+    )
+
 
 

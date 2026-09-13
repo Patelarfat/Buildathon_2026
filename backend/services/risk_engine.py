@@ -212,7 +212,9 @@ class RiskEngine:
             "area_id": area_id,
             "time_window_days": days,
             "score": clamped_score,
+            "risk_score": clamped_score,
             "level": level,
+            "risk_level": level,
             "data_confidence": data_confidence,
             "components": {
                 "ai_findings": ai_score,

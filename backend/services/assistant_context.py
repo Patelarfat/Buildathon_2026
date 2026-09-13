@@ -1,10 +1,15 @@
 """
-Context retrieval service for GenAI Construction Project Assistant.
-Aggregates relevant, grounded project data from PostgreSQL and the Risk Engine,
-enforcing strict project isolation and zero hallucination.
+Hybrid RAG Context Retrieval Service for GenAI Construction Project Assistant.
+Combines:
+1. Deterministic Intent Classification
+2. Authoritative Risk Engine Assessment (Multi-factor score, level, confidence, reasons)
+3. Authoritative SQL Aggregations (Exact facts filtered by query intent)
+4. Semantic Vector Evidence (pgvector similarity search matching query intent)
+5. Clean, Verified Source Traceability
 """
 
 import re
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Tuple, Optional
 from sqlalchemy.orm import Session
@@ -16,6 +21,128 @@ from services.risk_engine import RiskEngine
 from services.recurring_issue_service import RecurringIssueService
 from services.trend_service import TrendService
 from services.ppe_constants import AI_PPE_COMPLIANCE_TYPES, AI_PPE_VIOLATION_TYPES
+from services.rag.retriever import SemanticRetriever
+
+logger = logging.getLogger(__name__)
+
+
+def classify_user_intent(query: str) -> str:
+    """
+    Deterministic intent classifier prioritizing specific domains over generic ones.
+    Returns one of:
+    - MATERIALS
+    - SAFETY_INCIDENTS
+    - RECOMMENDED_ACTIONS
+    - PPE
+    - PROGRESS
+    - AREA
+    - INSPECTIONS
+    - OBSERVATIONS
+    - RISK
+    - GENERAL_PROJECT
+    """
+    q = query.lower().strip()
+
+    def has_any(keywords: List[str]) -> bool:
+        for kw in keywords:
+            if " " in kw:
+                if kw in q:
+                    return True
+            else:
+                if re.search(r'\b' + re.escape(kw) + r'\b', q):
+                    return True
+        return False
+
+    # 0. Greetings & Capabilities
+    clean_q = re.sub(r'[^\w\s]', '', q).strip()
+    if clean_q in [
+        "hi", "hii", "hiii", "hello", "hey", "heyy", "greetings", "howdy",
+        "good morning", "good afternoon", "good evening", "what can you do",
+        "who are you", "help", "start", "welcome"
+    ] or (len(clean_q.split()) <= 2 and any(clean_q == g for g in ["hi", "hii", "hello", "hey", "heyy", "howdy"])):
+        return "GREETING"
+
+    # 0.1 Out-of-Scope Detection (queries about non-construction topics)
+    if has_any([
+        "pm of", "prime minister", "president of", "capital of", "who is the prime",
+        "who is the president", "who is pm", "weather in tokyo", "weather in london",
+        "weather in new york", "weather in delhi", "weather in paris",
+        "tell me a joke", "write a poem", "write code for", "recipe for",
+        "cricket", "football", "celebrity", "movie", "song", "lyrics",
+        "meaning of life", "who won the match", "stock market"
+    ]):
+        return "OUT_OF_SCOPE"
+
+    # 1. Materials & Supply Chain
+    if has_any([
+        "material", "materials", "shortage", "shortages", "stock", "supply",
+        "supplier", "delivery", "delayed material", "blocking work", "rebar",
+        "concrete", "cement", "steel", "aggregate", "inventory"
+    ]):
+        return "MATERIALS"
+
+    # 2. Progress & Workforce (Daily operations)
+    if has_any([
+        "progress", "work completed", "work planned", "construction progress",
+        "workers", "workforce", "daily progress", "behind schedule", "daily report",
+        "today's site", "activities today", "what happened on site today", "site activity",
+        "happened on site", "today"
+    ]):
+        return "PROGRESS"
+
+    # 3. PPE & Computer Vision
+    if has_any([
+        "ppe", "helmet", "hard hat", "gloves", "boots", "goggles", "vest",
+        "protective equipment", "safety gear", "ppe violation", "ppe compliance"
+    ]):
+        return "PPE"
+
+    # 4. Inspections & Audits
+    if has_any([
+        "inspection", "inspections", "failed inspection", "audit", "safety audit",
+        "quality audit", "checklist", "inspector"
+    ]):
+        return "INSPECTIONS"
+
+    # 5. Observations & Hazards
+    if has_any([
+        "observation", "observations", "snag", "defect", "site observation", "hazard note"
+    ]):
+        return "OBSERVATIONS"
+
+    # 6. Safety Incidents & Accidents
+    if has_any([
+        "incident", "incidents", "accident", "accidents", "unresolved incident",
+        "open incident", "safety incident", "near miss", "injury", "hazard", "unsafe condition"
+    ]):
+        return "SAFETY_INCIDENTS"
+
+    # 7. Recommended Actions
+    if has_any([
+        "what are the recommended actions", "recommended action", "recommended actions",
+        "what should we do", "recommendation", "recommendations", "next step", "next steps",
+        "what to do", "mitigation", "mitigations", "corrective action", "corrective actions"
+    ]):
+        return "RECOMMENDED_ACTIONS"
+
+    # 8. Area & Spatial Intelligence
+    if has_any([
+        "which area", "what area", "area needs", "zone needs", "worst area",
+        "area ranking", "affected area", "affected areas", "high risk area", "building block"
+    ]):
+        return "AREA"
+
+    # 9. Risk & Analytics
+    if has_any([
+        "why is the project risk", "why is project risk", "risk score", "risk level",
+        "why risk", "high risk", "medium risk", "critical risk", "what is the project risk",
+        "what is the risk", "risk factors", "explain risk", "how is risk", "risk assessment",
+        "safety risk", "major risk", "major risks", "top safety risks"
+    ]):
+        return "RISK"
+
+    # 10. General Project Overview
+    return "GENERAL_PROJECT"
 
 
 def _parse_time_intent(query: str) -> Optional[Tuple[datetime, Optional[datetime]]]:
@@ -44,8 +171,9 @@ def retrieve_assistant_context(
     query: str
 ) -> Tuple[str, List[schemas.AssistantSource], List[str], str]:
     """
-    Builds a grounded, topic-focused prompt context by querying project data
-    strictly scoped to project_id.
+    Builds a grounded Hybrid RAG prompt context combining exact SQL metrics,
+    authoritative Risk Engine scoring, and intent-targeted pgvector semantic retrieval.
+    Strictly isolated by project_id.
     """
     project = db.query(models.Project).filter(models.Project.id == project_id).first()
     if not project:
@@ -53,250 +181,289 @@ def retrieve_assistant_context(
 
     project_name = project.name
     query_lower = query.lower()
+    intent = classify_user_intent(query_lower)
     time_filter = _parse_time_intent(query_lower)
 
-    # Resolve area names
+    # 1. Resolve site and area entity mentions in query for scoped retrieval
+    sites = db.query(models.Site).filter(models.Site.project_id == project_id).all()
+    matched_site_id = None
+    for s in sites:
+        if s.name.lower() in query_lower:
+            matched_site_id = s.id
+            break
+
     areas = db.query(models.Area).join(models.Site).filter(models.Site.project_id == project_id).all()
     matched_area_ids = []
     for area in areas:
         if area.name.lower() in query_lower:
             matched_area_ids.append(area.id)
 
-    # Routing intent flags
-    is_risk = any(k in query_lower for k in ["risk", "safety score", "why is", "high risk", "score", "level", "explain risk"])
-    is_incident = any(k in query_lower for k in ["incident", "accident", "injury", "near miss", "hazard", "unresolved", "open incident"])
-    is_inspection = any(k in query_lower for k in ["inspection", "failed", "audit", "checklist", "inspector", "safety netting"])
-    is_observation = any(k in query_lower for k in ["observation", "hazard", "defect", "warning", "snag"])
-    is_material = any(k in query_lower for k in ["material", "rebar", "concrete", "delivery", "shortage", "delayed", "supply", "blocker", "stock"])
-    is_daily_report = any(k in query_lower for k in ["daily report", "log", "work completed", "work planned", "weather", "today", "yesterday", "activities", "workforce", "workers"])
-    is_recurring = any(k in query_lower for k in ["recurring", "repeated", "repeat", "trend", "worst area", "area ranking", "frequent"])
-    is_ppe_violation = any(k in query_lower for k in ["ppe violation", "without helmet", "no helmet", "no vest", "no gloves", "violating", "violations", "unsafe"])
-    is_ppe_compliance = any(k in query_lower for k in ["ppe compliance", "compliant", "helmet detected", "wearing", "protective equipment"])
-    is_summary = any(k in query_lower for k in ["summary", "overview", "status", "health", "brief", "how is", "everything", "all"])
+    matched_area_id = matched_area_ids[0] if len(matched_area_ids) == 1 else None
 
-    # Default fallback: show summary if nothing matches specifically
-    if not any([is_risk, is_incident, is_inspection, is_observation, is_material, is_daily_report, is_recurring, is_ppe_violation, is_ppe_compliance]):
-        is_summary = True
-
-    context_blocks = []
     sources: List[schemas.AssistantSource] = []
     data_used: List[str] = []
+    seen_source_keys = set()
 
-    # Block 1: Project Metadata & Authoritative Risk Engine Output
-    if is_risk or is_summary or is_recurring:
-        try:
-            risk_eval = RiskEngine.evaluate_risk(db=db, project_id=project_id, days=7)
-            risk_block = (
-                f"[PROJECT RISK ENGINE EVALUATION]\n"
-                f"Project: {project.name} (Status: {project.status})\n"
-                f"Authoritative Risk Score: {risk_eval.get('risk_score')}/100\n"
-                f"Risk Level: {risk_eval.get('risk_level')}\n"
-                f"Data Confidence: {risk_eval.get('data_confidence')}\n"
-                f"Key Contributing Factors:\n" +
-                "\n".join([f"  - {r}" for r in risk_eval.get("reasons", ["No elevated risk factors detected."])])
+    def add_source(st: str, sid: str, title: str, detail: Optional[str] = None):
+        key = f"{st}_{sid}"
+        if key not in seen_source_keys:
+            seen_source_keys.add(key)
+            sources.append(schemas.AssistantSource(type=st, id=key, title=title, detail=detail))
+
+    # 2. Authoritative Risk Engine Assessment (Deterministic Baseline)
+    risk_eval: Dict[str, Any] = {}
+    try:
+        risk_eval = RiskEngine.evaluate_risk(
+            db=db,
+            project_id=project_id,
+            site_id=matched_site_id,
+            area_id=matched_area_id,
+            days=7
+        )
+        r_score = risk_eval.get("score") if risk_eval.get("score") is not None else risk_eval.get("risk_score", 0)
+        r_level = risk_eval.get("level") or risk_eval.get("risk_level", "LOW")
+
+        # Only add risk to sources if query is RISK, RECOMMENDED_ACTIONS, or GENERAL_PROJECT
+        if intent in ["RISK", "RECOMMENDED_ACTIONS", "GENERAL_PROJECT", "AREA"]:
+            add_source(
+                st="RISK",
+                sid="risk_engine",
+                title=f"Risk Engine: Score {r_score}/100 ({r_level})",
+                detail="Authoritative multi-factor risk assessment"
             )
-            context_blocks.append(risk_block)
-            sources.append(schemas.AssistantSource(
-                type="RISK",
-                id="risk_engine",
-                title=f"Risk Engine: Score {risk_eval.get('risk_score')} ({risk_eval.get('risk_level')})",
-                detail="Deterministic multi-factor risk assessment"
-            ))
             data_used.append("risk_engine")
-        except Exception:
-            pass
+    except Exception as e:
+        logger.warning(f"Error evaluating risk in assistant_context: {e}")
 
-    # Block 2: Recurring Issues & Area Rankings
-    if is_recurring or is_risk or is_summary:
-        try:
-            recurring = RecurringIssueService.detect_recurring_issues(db=db, project_id=project_id, days=14)
-            area_rankings = RiskEngine.get_area_risk_rankings(db=db, project_id=project_id, days=7)
-            
-            rec_lines = [f"  * [{rec.get('severity')}] {rec.get('issue_type')} in {rec.get('area_name')} ({rec.get('count')} occurrences)" for rec in recurring]
-            rank_lines = [f"  * Rank {idx+1}: {r.get('area_name')} (Score: {r.get('risk_score')}, Level: {r.get('risk_level')})" for idx, r in enumerate(area_rankings[:5])]
-            
-            rec_joined = "\n".join(rec_lines) if rec_lines else "  * No recurring issues detected (all issue clusters < 3 occurrences)."
-            rank_joined = "\n".join(rank_lines) if rank_lines else "  * No area risk rankings available."
+    # 3. Intent-Specific Semantic Vector RAG Retrieval
+    source_type_filters = None
+    if intent == "MATERIALS":
+        source_type_filters = ["MATERIAL"]
+    elif intent in ["SAFETY_INCIDENTS", "RECOMMENDED_ACTIONS"]:
+        source_type_filters = ["INCIDENT", "INSPECTION"]
+    elif intent == "INSPECTIONS":
+        source_type_filters = ["INSPECTION"]
+    elif intent == "OBSERVATIONS":
+        source_type_filters = ["OBSERVATION"]
+    elif intent == "PROGRESS":
+        source_type_filters = ["DAILY_REPORT"]
+    elif intent == "PPE":
+        source_type_filters = ["PHOTO", "AI_FINDING", "INCIDENT"]
+    elif intent == "AREA":
+        source_type_filters = ["AREA", "INCIDENT", "INSPECTION"]
 
-            rec_block = (
-                f"[RECURRING ISSUES & AREA SAFETY RANKING]\n"
-                f"Recurring Problems (>=3 occurrences):\n"
-                f"{rec_joined}\n"
-                f"Area Risk Ranking (Highest risk first):\n"
-                f"{rank_joined}"
+    semantic_matches = []
+    try:
+        semantic_matches = SemanticRetriever.search(
+            db=db,
+            project_id=project_id,
+            query=query,
+            top_k=5,
+            site_id=matched_site_id,
+            area_id=matched_area_id,
+            source_types=source_type_filters,
+            min_similarity=0.08
+        )
+        if semantic_matches:
+            data_used.append("semantic_rag")
+            for m in semantic_matches:
+                st = m["source_type"]
+                sid = m["source_id"]
+                title = m["title"] or f"{st} #{sid}"
+                # Clean up title
+                add_source(st=st, sid=str(sid), title=title, detail=f"Semantic evidence match")
+    except Exception:
+        pass
+
+    # 4. Intent-Targeted SQL Data Retrieval
+    context_sections = []
+
+    # Include project baseline metadata
+    risk_score = risk_eval.get("score") if risk_eval.get("score") is not None else risk_eval.get("risk_score", 0)
+    risk_level = risk_eval.get("level") or risk_eval.get("risk_level", "LOW")
+    risk_reasons = risk_eval.get("reasons", ["No elevated risk factors detected."])
+
+    open_incidents_count = db.query(func.count(models.SafetyIncident.id)).filter(
+        models.SafetyIncident.project_id == project_id,
+        models.SafetyIncident.status.in_(["OPEN", "UNDER_REVIEW"])
+    ).scalar() or 0
+
+    context_sections.append(
+        f"PROJECT METADATA & AUTHORITATIVE RISK ENGINE:\n"
+        f"- Project Name: {project.name}\n"
+        f"- Project Status: {project.status}\n"
+        f"- Authoritative Risk Score: {risk_score}/100 ({risk_level})\n"
+        f"- Data Confidence: {risk_eval.get('data_confidence', 'HIGH')}\n"
+        f"- Contributing Risk Factors:\n" + "\n".join([f"  * {r}" for r in risk_reasons])
+    )
+
+    context_sections.append(
+        f"EXACT FACTS & RECORD COUNTS (SQL):\n"
+        f"- Unresolved Safety Incidents: {open_incidents_count}"
+    )
+
+    # A. MATERIALS QUERY
+    if intent == "MATERIALS":
+        mat_q = db.query(models.Material).filter(models.Material.project_id == project_id)
+        mat_records = mat_q.order_by(models.Material.id.desc()).limit(10).all()
+        mat_bullets = []
+        for m in mat_records:
+            mat_bullets.append(
+                f"- Material #{m.id}: {m.material_name} ({m.category or 'General'}) - Qty: {m.quantity} {m.unit} (Status: {m.status}). Supplier: {m.supplier or 'N/A'}. Notes: {m.notes or 'None'}"
             )
-            context_blocks.append(rec_block)
-            sources.append(schemas.AssistantSource(
-                type="RECURRING",
-                id="recurring_analysis",
-                title="Area Risk Ranking & Recurring Issue Detector",
-                detail=f"{len(recurring)} recurring issue(s), {len(area_rankings)} ranked area(s)"
-            ))
-            data_used.append("recurring_issues")
+            add_source("MATERIAL", str(m.id), f"Material: {m.material_name}", f"Status: {m.status} ({m.quantity} {m.unit})")
+            data_used.append("materials")
+
+        if mat_bullets:
+            context_sections.append("MATERIALS & INVENTORY DETAIL (SQL):\n" + "\n".join(mat_bullets))
+        else:
+            context_sections.append("MATERIALS & INVENTORY DETAIL (SQL):\n- No material records or shortages found in project database.")
+
+    # B. SAFETY INCIDENTS / RISK QUERY
+    elif intent in ["SAFETY_INCIDENTS", "RISK", "RECOMMENDED_ACTIONS"]:
+        inc_q = db.query(models.SafetyIncident).filter(models.SafetyIncident.project_id == project_id)
+        if matched_area_ids:
+            inc_q = inc_q.filter(models.SafetyIncident.area_id.in_(matched_area_ids))
+        inc_records = inc_q.order_by(models.SafetyIncident.id.desc()).limit(8).all()
+        inc_bullets = []
+        for inc in inc_records:
+            site_n = inc.site.name if inc.site else "Site"
+            area_n = inc.area.name if inc.area else "Overall"
+            inc_bullets.append(
+                f"- Incident #{inc.id} ({inc.severity} {inc.incident_type}, Status: {inc.status}) on {inc.incident_date} at {site_n} -> {area_n}: {inc.description} (Action: {inc.action_taken or 'None'})"
+            )
+            add_source("INCIDENT", str(inc.id), f"Safety Incident #{inc.id}: {inc.incident_type}", f"{inc.severity} · {inc.status}")
+            data_used.append("safety_incidents")
+
+        if inc_bullets:
+            context_sections.append("SAFETY INCIDENTS DETAIL (SQL):\n" + "\n".join(inc_bullets))
+        else:
+            context_sections.append("SAFETY INCIDENTS DETAIL (SQL):\n- No unresolved safety incidents recorded.")
+
+        # Also load failed inspections if risk or actions
+        if intent in ["RISK", "RECOMMENDED_ACTIONS"]:
+            insp_q = db.query(models.InspectionReport).filter(
+                models.InspectionReport.project_id == project_id,
+                models.InspectionReport.status == "FAILED"
+            ).order_by(models.InspectionReport.id.desc()).limit(5).all()
+            insp_bullets = []
+            for insp in insp_q:
+                area_n = insp.area.name if insp.area else "Overall"
+                insp_bullets.append(
+                    f"- Failed Inspection #{insp.id} ({insp.inspection_type}) in {area_n}: Findings: {insp.findings or 'None'}. Recommendations: {insp.recommendations or 'None'}."
+                )
+                add_source("INSPECTION", str(insp.id), f"Inspection #{insp.id}: {insp.inspection_type}", f"Status: {insp.status}")
+                data_used.append("inspections")
+            if insp_bullets:
+                context_sections.append("FAILED INSPECTIONS (SQL):\n" + "\n".join(insp_bullets))
+
+    # C. INSPECTIONS QUERY
+    elif intent == "INSPECTIONS":
+        insp_q = db.query(models.InspectionReport).filter(models.InspectionReport.project_id == project_id)
+        if matched_area_ids:
+            insp_q = insp_q.filter(models.InspectionReport.area_id.in_(matched_area_ids))
+        insp_records = insp_q.order_by(models.InspectionReport.id.desc()).limit(8).all()
+        insp_bullets = []
+        for insp in insp_records:
+            area_n = insp.area.name if insp.area else "Overall"
+            insp_bullets.append(
+                f"- Inspection #{insp.id} ({insp.inspection_type}, Status: {insp.status}) on {insp.inspection_date} in {area_n}: Findings: {insp.findings or 'None'}. Recommendations: {insp.recommendations or 'None'}."
+            )
+            add_source("INSPECTION", str(insp.id), f"Inspection #{insp.id}: {insp.inspection_type}", f"Status: {insp.status}")
+            data_used.append("inspections")
+        if insp_bullets:
+            context_sections.append("INSPECTION REPORTS DETAIL (SQL):\n" + "\n".join(insp_bullets))
+        else:
+            context_sections.append("INSPECTION REPORTS DETAIL (SQL):\n- No inspection reports found.")
+
+    # D. OBSERVATIONS QUERY
+    elif intent == "OBSERVATIONS":
+        obs_q = db.query(models.Observation).filter(models.Observation.project_id == project_id)
+        if matched_area_ids:
+            obs_q = obs_q.filter(models.Observation.area_id.in_(matched_area_ids))
+        obs_records = obs_q.order_by(models.Observation.id.desc()).limit(8).all()
+        obs_bullets = []
+        for obs in obs_records:
+            area_n = obs.area.name if obs.area else "Overall"
+            obs_bullets.append(
+                f"- Observation #{obs.id} [{obs.priority}] '{obs.title}' ({obs.observation_type}, Status: {obs.status}) in {area_n}: {obs.description}"
+            )
+            add_source("OBSERVATION", str(obs.id), f"Observation #{obs.id}: {obs.title}", f"{obs.priority} · {obs.status}")
+            data_used.append("observations")
+        if obs_bullets:
+            context_sections.append("SITE OBSERVATIONS DETAIL (SQL):\n" + "\n".join(obs_bullets))
+        else:
+            context_sections.append("SITE OBSERVATIONS DETAIL (SQL):\n- No open observations found.")
+
+    # E. PROGRESS QUERY
+    elif intent == "PROGRESS":
+        rep_q = db.query(models.DailyReport).filter(models.DailyReport.project_id == project_id)
+        rep_records = rep_q.order_by(models.DailyReport.report_date.desc()).limit(5).all()
+        rep_bullets = []
+        for r in rep_records:
+            rep_bullets.append(
+                f"- Daily Report #{r.id} ({r.report_date}): Completed: {r.work_completed or 'N/A'}, Workforce: {r.workers_count or 0} workers, Weather: {r.weather or 'Clear'}, Blockers: {r.blockers or 'None'}, Notes: {r.notes or 'None'}"
+            )
+            add_source("DAILY_REPORT", str(r.id), f"Daily Report ({r.report_date})", f"{r.workers_count or 0} workers · Progress {r.progress_percentage or 0}%")
+            data_used.append("daily_reports")
+        if rep_bullets:
+            context_sections.append("DAILY PROGRESS & WORKFORCE DETAIL (SQL):\n" + "\n".join(rep_bullets))
+        else:
+            context_sections.append("DAILY PROGRESS & WORKFORCE DETAIL (SQL):\n- No daily report logs recorded.")
+
+    # F. PPE QUERY
+    elif intent == "PPE":
+        ai_violations_count = db.query(func.count(models.AISafetyFinding.id)).filter(
+            models.AISafetyFinding.project_id == project_id,
+            models.AISafetyFinding.finding_type.in_(AI_PPE_VIOLATION_TYPES),
+            models.AISafetyFinding.status != "FALSE_POSITIVE"
+        ).scalar() or 0
+
+        ai_compliance_count = db.query(func.count(models.AISafetyFinding.id)).filter(
+            models.AISafetyFinding.project_id == project_id,
+            models.AISafetyFinding.finding_type.in_(AI_PPE_COMPLIANCE_TYPES)
+        ).scalar() or 0
+
+        context_sections.append(
+            f"PPE COMPUTER VISION METRICS (SQL):\n"
+            f"- PPE Compliance Findings: {ai_compliance_count} verified detections (Helmets, Vests, Boots, Goggles, Gloves)\n"
+            f"- PPE Violations: {ai_violations_count} non-compliance findings (Person without helmet / vest)"
+        )
+        add_source("PPE", "ppe_vision", "AI PPE Vision Detection", f"Compliance: {ai_compliance_count} · Violations: {ai_violations_count}")
+        data_used.append("ppe_vision")
+
+    # G. AREA QUERY / GENERAL PROJECT
+    else:
+        # Load summary of all domains
+        open_incidents_count = db.query(func.count(models.SafetyIncident.id)).filter(
+            models.SafetyIncident.project_id == project_id,
+            models.SafetyIncident.status.in_(["OPEN", "UNDER_REVIEW"])
+        ).scalar() or 0
+
+        context_sections.append(
+            f"EXACT FACTS & RECORD COUNTS (SQL):\n"
+            f"- Unresolved Safety Incidents: {open_incidents_count}"
+        )
+
+        area_rankings = []
+        try:
+            area_rankings = RiskEngine.get_area_risk_rankings(db=db, project_id=project_id, days=7)
         except Exception:
             pass
 
-    # Block 3: Safety Incidents
-    if is_incident or is_risk or is_summary or matched_area_ids:
-        inc_query = db.query(models.SafetyIncident).filter(models.SafetyIncident.project_id == project_id)
-        if matched_area_ids:
-            inc_query = inc_query.filter(models.SafetyIncident.area_id.in_(matched_area_ids))
-        if time_filter:
-            inc_query = inc_query.filter(models.SafetyIncident.incident_date >= str(time_filter[0].date()))
-            if time_filter[1]:
-                inc_query = inc_query.filter(models.SafetyIncident.incident_date <= str(time_filter[1].date()))
+        if area_rankings:
+            rank_str = "\n".join([f"  * Rank {idx+1}: {r.get('area_name')} (Risk Score: {r.get('risk_score')}, Level: {r.get('risk_level')})" for idx, r in enumerate(area_rankings[:5])])
+            context_sections.append(f"AREA SAFETY RANKING:\n{rank_str}")
+            for r in area_rankings[:3]:
+                if r.get("area_name"):
+                    add_source("AREA", str(r.get("area_name")), f"Area: {r.get('area_name')}", f"Risk: {r.get('risk_score')}/100")
 
-        incidents = inc_query.order_by(models.SafetyIncident.id.desc()).limit(15).all()
-        if incidents:
-            inc_lines = []
-            for inc in incidents:
-                site_name = inc.site.name if inc.site else 'Unknown Site'
-                area_name = inc.area.name if inc.area else 'General'
-                inc_lines.append(
-                    f"  * Incident #{inc.id}: [{inc.severity}] {inc.incident_type} (Status: {inc.status}) on {inc.incident_date} at {site_name} -> {area_name}. Description: {inc.description}. Action Taken: {inc.action_taken or 'None'}"
-                )
-                sources.append(schemas.AssistantSource(
-                    type="INCIDENT",
-                    id=f"incident_{inc.id}",
-                    title=f"Safety Incident #{inc.id}: {inc.incident_type} ({inc.severity})",
-                    detail=f"Status: {inc.status} · Area: {area_name}"
-                ))
-            context_blocks.append(f"[SAFETY INCIDENTS]\n" + "\n".join(inc_lines))
-            data_used.append("safety_incidents")
-        elif is_incident:
-            context_blocks.append("[SAFETY INCIDENTS]\nNo safety incidents recorded matching the query.")
-            data_used.append("safety_incidents")
+    # Include Semantic Evidence if relevant matches exist
+    if semantic_matches:
+        rag_lines = [f"  * [{m['source_type']}] {m['content']}" for m in semantic_matches]
+        context_sections.append(
+            f"RELEVANT SEMANTIC EVIDENCE (RAG VECTOR SEARCH):\n" + "\n".join(rag_lines)
+        )
 
-    # Block 4: Inspections
-    if is_inspection or is_risk or is_summary or matched_area_ids:
-        insp_query = db.query(models.InspectionReport).filter(models.InspectionReport.project_id == project_id)
-        if matched_area_ids:
-            insp_query = insp_query.filter(models.InspectionReport.area_id.in_(matched_area_ids))
-        if time_filter:
-            insp_query = insp_query.filter(models.InspectionReport.inspection_date >= str(time_filter[0].date()))
-            if time_filter[1]:
-                insp_query = insp_query.filter(models.InspectionReport.inspection_date <= str(time_filter[1].date()))
-
-        inspections = insp_query.order_by(models.InspectionReport.id.desc()).limit(15).all()
-        if inspections:
-            insp_lines = []
-            for insp in inspections:
-                area_name = insp.area.name if insp.area else 'General'
-                insp_lines.append(
-                    f"  * Inspection #{insp.id}: {insp.inspection_type} - Status: {insp.status} on {insp.inspection_date} in {area_name}. Findings: {insp.findings or 'None'}. Recommendations: {insp.recommendations or 'None'}"
-                )
-                sources.append(schemas.AssistantSource(
-                    type="INSPECTION",
-                    id=f"inspection_{insp.id}",
-                    title=f"Inspection #{insp.id}: {insp.inspection_type} ({insp.status})",
-                    detail=f"Status: {insp.status} · Date: {insp.inspection_date}"
-                ))
-            context_blocks.append(f"[INSPECTION REPORTS]\n" + "\n".join(insp_lines))
-            data_used.append("inspections")
-        elif is_inspection:
-            context_blocks.append("[INSPECTION REPORTS]\nNo inspection reports recorded matching the query.")
-            data_used.append("inspections")
-
-    # Block 5: Observations & Issues
-    if is_observation or is_risk or is_summary or matched_area_ids:
-        obs_query = db.query(models.Observation).filter(models.Observation.project_id == project_id)
-        if matched_area_ids:
-            obs_query = obs_query.filter(models.Observation.area_id.in_(matched_area_ids))
-
-        observations = obs_query.order_by(models.Observation.id.desc()).limit(15).all()
-        if observations:
-            obs_lines = []
-            for obs in observations:
-                area_name = obs.area.name if obs.area else 'General'
-                obs_lines.append(
-                    f"  * Observation #{obs.id}: [{obs.priority}] '{obs.title}' ({obs.observation_type}, Status: {obs.status}) in {area_name}. Description: {obs.description}"
-                )
-                sources.append(schemas.AssistantSource(
-                    type="OBSERVATION",
-                    id=f"observation_{obs.id}",
-                    title=f"Observation #{obs.id}: {obs.title} ({obs.priority})",
-                    detail=f"Type: {obs.observation_type} · Status: {obs.status}"
-                ))
-            context_blocks.append(f"[SITE OBSERVATIONS & HAZARDS]\n" + "\n".join(obs_lines))
-            data_used.append("observations")
-        elif is_observation:
-            context_blocks.append("[SITE OBSERVATIONS & HAZARDS]\nNo site observations recorded matching the query.")
-            data_used.append("observations")
-
-    # Block 6: Materials & Operational Blockers
-    if is_material or is_summary:
-        materials = db.query(models.Material).filter(models.Material.project_id == project_id).order_by(models.Material.id.desc()).limit(20).all()
-        if materials:
-            mat_lines = []
-            for m in materials:
-                is_alert = m.status in ["LOW_STOCK", "OUT_OF_STOCK", "DELAYED"]
-                mat_lines.append(
-                    f"  * Material #{m.id}: {m.material_name} ({m.category or 'General'}) - Quantity: {m.quantity} {m.unit} - Status: {m.status} Notes: {m.notes or 'None'} {'[SHORTAGE/BLOCKER ALERT]' if is_alert else ''}"
-                )
-                if is_alert or is_material:
-                    sources.append(schemas.AssistantSource(
-                        type="MATERIAL",
-                        id=f"material_{m.id}",
-                        title=f"Material #{m.id}: {m.material_name} ({m.status})",
-                        detail=f"Quantity: {m.quantity} {m.unit} · Status: {m.status}"
-                    ))
-            context_blocks.append(f"[MATERIALS & INVENTORY]\n" + "\n".join(mat_lines))
-            data_used.append("materials")
-        elif is_material:
-            context_blocks.append("[MATERIALS & INVENTORY]\nNo material records found for this project.")
-            data_used.append("materials")
-
-    # Block 7: PPE Vision & Safety Findings
-    if is_ppe_violation or is_ppe_compliance or is_risk or is_summary:
-        findings_query = db.query(models.AISafetyFinding).filter(models.AISafetyFinding.project_id == project_id)
-        if matched_area_ids:
-            findings_query = findings_query.filter(models.AISafetyFinding.area_id.in_(matched_area_ids))
-
-        findings = findings_query.order_by(models.AISafetyFinding.id.desc()).limit(25).all()
-        
-        violations = [f for f in findings if f.finding_type in AI_PPE_VIOLATION_TYPES or "WITHOUT" in f.finding_type or f.severity in ["MEDIUM", "HIGH", "CRITICAL"]]
-        compliances = [f for f in findings if f.finding_type in AI_PPE_COMPLIANCE_TYPES or "DETECTED" in f.finding_type or f.severity in ["INFO", "LOW"]]
-
-        if is_ppe_compliance or is_summary:
-            comp_lines = [f"  * Verified PPE Compliance #{c.id}: {c.title} ({c.finding_type}) - Confidence: {round(c.confidence*100)}% · Status: {c.status}" for c in compliances]
-            context_blocks.append(f"[PPE COMPLIANCE CONFIRMATIONS]\n" + ("\n".join(comp_lines) if comp_lines else "No verified PPE compliance records currently recorded."))
-            for c in compliances[:5]:
-                sources.append(schemas.AssistantSource(type="AI_PPE", id=f"finding_{c.id}", title=c.title, detail=f"Type: {c.finding_type}"))
-            data_used.append("ppe_compliance")
-
-        if is_ppe_violation or is_risk or is_summary:
-            viol_lines = [f"  * AI Safety Violation #{v.id}: [{v.severity}] {v.title} ({v.finding_type}) - Status: {v.status} · Confidence: {round(v.confidence*100)}%" for v in violations]
-            context_blocks.append(f"[AI PPE SAFETY VIOLATIONS]\n" + ("\n".join(viol_lines) if viol_lines else "No active AI PPE safety violations detected."))
-            for v in violations[:5]:
-                sources.append(schemas.AssistantSource(type="AI_PPE", id=f"finding_{v.id}", title=f"Violation: {v.title} ({v.severity})", detail=f"Status: {v.status}"))
-            data_used.append("ppe_violations")
-
-    # Block 8: Daily Reports & Progress
-    if is_daily_report or is_summary or matched_area_ids:
-        rep_query = db.query(models.DailyReport).filter(models.DailyReport.project_id == project_id)
-        if time_filter:
-            rep_query = rep_query.filter(models.DailyReport.report_date >= str(time_filter[0].date()))
-            if time_filter[1]:
-                rep_query = rep_query.filter(models.DailyReport.report_date <= str(time_filter[1].date()))
-
-        reports = rep_query.order_by(models.DailyReport.report_date.desc()).limit(7).all()
-        if reports:
-            rep_lines = []
-            for r in reports:
-                rep_lines.append(
-                    f"  * Daily Report #{r.id} ({r.report_date}): Completed: {r.work_completed or 'N/A'} · Workforce: {r.workers_count or 0} workers. Weather: {r.weather or 'N/A'}. Notes: {r.notes or 'None'}. Blockers: {r.blockers or 'None'}"
-                )
-                sources.append(schemas.AssistantSource(
-                    type="DAILY_REPORT",
-                    id=f"report_{r.id}",
-                    title=f"Daily Report ({r.report_date})",
-                    detail=f"Workforce: {r.workers_count or 0} workers · Notes: {r.notes or 'None'}"
-                ))
-            context_blocks.append(f"[DAILY SITE REPORTS & PROGRESS]\n" + "\n".join(rep_lines))
-            data_used.append("daily_reports")
-        elif is_daily_report:
-            context_blocks.append("[DAILY SITE REPORTS & PROGRESS]\nNo daily reports found matching the query.")
-            data_used.append("daily_reports")
-
-    final_context = "\n\n".join(context_blocks)
-    return final_context, sources, data_used, project_name
+    final_context = "\n\n".join(context_sections)
+    return final_context, sources, list(set(data_used)), project_name
