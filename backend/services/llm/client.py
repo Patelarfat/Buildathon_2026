@@ -313,7 +313,6 @@ User Question: {query}"""
         return cleaned.strip()
 
     @classmethod
-    @classmethod
     def _synthesize_grounded_fallback(cls, query: str, context: str, project_name: str) -> str:
         """
         Deterministic manager-friendly synthesis engine (Phase 8.2D / Phase 8.2E).

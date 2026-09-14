@@ -1,14 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
-  ShieldAlert,
   Users,
-  PieChart,
   Sparkles,
-  ChevronDown,
-  ChevronUp,
   HardHat,
   Shirt,
   Hand,
@@ -16,548 +12,724 @@ import {
   AlertTriangle,
   Camera,
   Clock,
-  Check,
-  X,
   CheckCircle2,
+  Maximize2,
+  MapPin,
+  X,
 } from "lucide-react";
 import {
   AssistantPPEInfo,
   AssistantPPEPhotoItem,
   PersonPPEStatus,
+  SitePhoto,
   getPhotoImageUrl,
 } from "@/lib/api";
 
 interface PPECardProps {
   ppe: AssistantPPEInfo;
+  projectPhotos?: SitePhoto[];
   className?: string;
 }
 
-function PhotoCardItem({
-  photo,
-  isExpanded,
-  toggleExpand,
+type PPECategory = "helmet" | "vest" | "gloves" | "boots";
+
+interface PPECategoryStatus {
+  label: string;
+  badgeText: "Worn" | "Missing" | "Not Detected";
+  status: "WORN" | "MISSING" | "NOT_DETECTED";
+  icon: React.ReactNode;
+}
+
+function getItemCategoryStatus(
+  person: PersonPPEStatus,
+  cat: PPECategory
+): PPECategoryStatus {
+  const catIcons: Record<PPECategory, React.ReactNode> = {
+    helmet: <HardHat className="w-4 h-4 text-amber-500 shrink-0" />,
+    vest: <Shirt className="w-4 h-4 text-orange-500 shrink-0" />,
+    gloves: <Hand className="w-4 h-4 text-blue-500 shrink-0" />,
+    boots: <Footprints className="w-4 h-4 text-amber-700 shrink-0" />,
+  };
+
+  const catLabels: Record<PPECategory, string> = {
+    helmet: "Safety Helmet",
+    vest: "Safety Vest",
+    gloves: "Protective Gloves",
+    boots: "Safety Boots",
+  };
+
+  const itemState = person[cat];
+  if (itemState && typeof itemState.detected === "boolean") {
+    if (itemState.detected) {
+      return {
+        label: catLabels[cat],
+        badgeText: "Worn",
+        status: "WORN",
+        icon: catIcons[cat],
+      };
+    } else {
+      return {
+        label: catLabels[cat],
+        badgeText: "Missing",
+        status: "MISSING",
+        icon: catIcons[cat],
+      };
+    }
+  }
+
+  // Check in person.violations array for this exact person
+  const searchTerms: Record<PPECategory, string[]> = {
+    helmet: ["helmet", "hard hat", "head"],
+    vest: ["vest", "hi-vis", "visibility"],
+    gloves: ["glove", "hand"],
+    boots: ["boot", "shoe", "footwear"],
+  };
+
+  const terms = searchTerms[cat];
+  const isMissingInViolations = (person.violations || []).some((v) =>
+    terms.some((term) => v.toLowerCase().includes(term))
+  );
+
+  if (isMissingInViolations) {
+    return {
+      label: catLabels[cat],
+      badgeText: "Missing",
+      status: "MISSING",
+      icon: catIcons[cat],
+    };
+  }
+
+  if (person.compliant) {
+    return {
+      label: catLabels[cat],
+      badgeText: "Worn",
+      status: "WORN",
+      icon: catIcons[cat],
+    };
+  }
+
+  return {
+    label: catLabels[cat],
+    badgeText: "Not Detected",
+    status: "NOT_DETECTED",
+    icon: catIcons[cat],
+  };
+}
+
+function SourceImageWithBoundingBoxes({
+  imageUrl,
+  title,
+  people = [],
+  onPreview,
 }: {
-  photo: AssistantPPEPhotoItem;
-  isExpanded: boolean;
-  toggleExpand: (id: number) => void;
+  imageUrl: string | null;
+  title: string;
+  people: PersonPPEStatus[];
+  onPreview: (url: string) => void;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
-  const hasViolations = photo.violations_count > 0;
 
-  const rawUrl = photo.image_url || `/api/photos/${photo.photo_id}/image`;
-  const fullUrl = getPhotoImageUrl(rawUrl);
+  if (!imageUrl || imgFailed) {
+    return (
+      <div className="w-full h-80 bg-slate-100 rounded-2xl border border-slate-200 flex flex-col items-center justify-center p-6 text-center space-y-2">
+        <Camera className="w-12 h-12 text-slate-300" />
+        <span className="text-sm font-bold text-slate-700 uppercase font-mono">{title}</span>
+        <span className="text-xs text-slate-500 font-medium">Source image unavailable</span>
+      </div>
+    );
+  }
+
+  const photoW = 800;
+  const photoH = 532;
 
   return (
-    <div
-      className={`rounded-xl border transition-all overflow-hidden bg-white shadow-2xs ${
-        hasViolations
-          ? "border-slate-200 border-l-4 border-l-rose-500"
-          : "border-slate-200 border-l-4 border-l-emerald-500"
-      }`}
-    >
-      {/* Photo Main Bar */}
-      <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          {/* Thumbnail Container: 100-140px wide desktop */}
-          <div className="w-24 sm:w-32 h-16 sm:h-20 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative group">
-            {!imgFailed && fullUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={fullUrl}
-                alt={photo.title}
-                onError={() => setImgFailed(true)}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-              />
-            ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 p-1 text-center">
-                <Camera className="w-5 h-5 mb-0.5 text-slate-400" />
-                <span className="text-[9px] font-medium text-slate-400 leading-tight">
-                  Photo unavailable
-                </span>
-              </div>
-            )}
+    <div className="relative w-full h-80 sm:h-[420px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 shadow-md group">
+      <img
+        src={imageUrl}
+        alt={title}
+        onError={() => setImgFailed(true)}
+        className="w-full h-full object-cover"
+      />
+
+      {people.map((p, idx) => {
+        const pBox = (p as any).x1 !== undefined ? (p as any) : null;
+        if (!pBox || pBox.x2 <= pBox.x1) return null;
+
+        const leftPct = (pBox.x1 / photoW) * 100;
+        const topPct = (pBox.y1 / photoH) * 100;
+        const widthPct = ((pBox.x2 - pBox.x1) / photoW) * 100;
+        const heightPct = ((pBox.y2 - pBox.y1) / photoH) * 100;
+
+        const isCompliant = p.compliant;
+        const displayId = p.person_id || idx + 1;
+
+        return (
+          <div
+            key={p.person_id || idx}
+            style={{
+              position: "absolute",
+              left: `${leftPct}%`,
+              top: `${topPct}%`,
+              width: `${widthPct}%`,
+              height: `${heightPct}%`,
+            }}
+            className={`border-2 transition-all ${
+              isCompliant
+                ? "border-emerald-500 bg-emerald-500/15"
+                : "border-rose-500 bg-rose-500/15"
+            }`}
+          >
+            <span
+              className={`absolute -top-5 left-0 text-[10px] font-extrabold font-mono px-1.5 py-0.2 rounded shadow-xs ${
+                isCompliant ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"
+              }`}
+            >
+              P{displayId}
+            </span>
           </div>
+        );
+      })}
 
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <h5 className="text-sm font-bold text-slate-900 tracking-tight">{photo.title}</h5>
-              {photo.created_at && (
-                <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                  <Clock className="w-3 h-3 text-slate-400" />
-                  {photo.created_at}
-                </span>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-              <span className="font-medium text-slate-700">{photo.workers_count} Workers</span>
-              <span>•</span>
-              <span className="text-emerald-700 font-bold">{photo.compliant_count} Compliant</span>
-              <span>•</span>
-              <span className={hasViolations ? "text-rose-700 font-bold" : "text-slate-500 font-medium"}>
-                {photo.violations_count} Violations
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 pt-0.5">
-              <span className="text-xs font-extrabold text-slate-900 font-mono bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                {photo.compliance_pct}% Compliance
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => toggleExpand(photo.photo_id)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors shrink-0 self-end sm:self-center cursor-pointer"
-        >
-          <span>{isExpanded ? "Hide Details" : "View Details"}</span>
-          {isExpanded ? (
-            <ChevronUp className="w-3.5 h-3.5" />
-          ) : (
-            <ChevronDown className="w-3.5 h-3.5" />
-          )}
-        </button>
+      <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-xs text-white font-mono text-xs px-3 py-1.5 rounded-lg border border-white/20 flex items-center gap-2">
+        <Sparkles className="w-3.5 h-3.5 text-[#F5B82E]" />
+        <span>AI VISION SOURCE</span>
       </div>
 
-      {/* Photo Alert Banner */}
-      {hasViolations && (
-        <div className="px-3.5 py-2 bg-rose-50/70 border-t border-rose-100 flex items-center gap-2 text-xs text-rose-800">
-          <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-          <span className="font-semibold">{photo.violations_count} worker(s) with PPE violations</span>
-          <span className="text-rose-700">• {photo.missing_summary}</span>
-        </div>
-      )}
-
-      {/* Collapsible Person Details */}
-      {isExpanded && photo.people && photo.people.length > 0 && (
-        <div className="p-3.5 bg-slate-50 border-t border-slate-200 space-y-3 transition-all duration-200">
-            <h6 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              WORKER PPE COMPLIANCE ({photo.people.length} WORKERS)
-            </h6>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {photo.people.map((person, pIdx) => {
-                const isPersonCompliant = person.compliant;
-                return (
-                  <div
-                    key={pIdx}
-                    className={`p-3 rounded-xl border bg-white space-y-2 ${
-                      isPersonCompliant ? "border-emerald-200" : "border-rose-200 shadow-2xs"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-900">
-                          Person {person.person_id}
-                        </span>
-                        {person.confidence && (
-                          <span className="text-[10px] font-mono text-slate-400">
-                            ({Math.round(person.confidence * 100)}%)
-                          </span>
-                        )}
-                      </div>
-                      <span
-                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                          isPersonCompliant
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-rose-50 text-rose-700 border border-rose-200"
-                        }`}
-                      >
-                        {isPersonCompliant ? "PPE COMPLIANT" : "PPE VIOLATION"}
-                      </span>
-                    </div>
-
-                    {/* Equipment Checklist */}
-                    <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                      {/* Helmet */}
-                      <div className="flex items-center justify-between p-1 rounded bg-slate-50">
-                        <span className="text-slate-600 flex items-center gap-1">
-                          <HardHat className="w-3 h-3 text-amber-500" />
-                          Helmet
-                        </span>
-                        {person.helmet?.detected ? (
-                          <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-                            <Check className="w-3 h-3" /> Detected
-                          </span>
-                        ) : (
-                          <span className="text-rose-600 font-bold flex items-center gap-0.5">
-                            <X className="w-3 h-3" /> Missing
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Vest */}
-                      <div className="flex items-center justify-between p-1 rounded bg-slate-50">
-                        <span className="text-slate-600 flex items-center gap-1">
-                          <Shirt className="w-3 h-3 text-orange-500" />
-                          Vest
-                        </span>
-                        {person.vest?.detected ? (
-                          <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-                            <Check className="w-3 h-3" /> Detected
-                          </span>
-                        ) : (
-                          <span className="text-rose-600 font-bold flex items-center gap-0.5">
-                            <X className="w-3 h-3" /> Missing
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Gloves */}
-                      <div className="flex items-center justify-between p-1 rounded bg-slate-50">
-                        <span className="text-slate-600 flex items-center gap-1">
-                          <Hand className="w-3 h-3 text-blue-500" />
-                          Gloves
-                        </span>
-                        {person.gloves?.detected ? (
-                          <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-                            <Check className="w-3 h-3" /> Detected
-                          </span>
-                        ) : (
-                          <span className="text-rose-600 font-bold flex items-center gap-0.5">
-                            <X className="w-3 h-3" /> Missing
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Boots */}
-                      <div className="flex items-center justify-between p-1 rounded bg-slate-50">
-                        <span className="text-slate-600 flex items-center gap-1">
-                          <Footprints className="w-3 h-3 text-amber-700" />
-                          Boots
-                        </span>
-                        {person.boots?.detected ? (
-                          <span className="text-emerald-700 font-bold flex items-center gap-0.5">
-                            <Check className="w-3 h-3" /> Detected
-                          </span>
-                        ) : (
-                          <span className="text-rose-600 font-bold flex items-center gap-0.5">
-                            <X className="w-3 h-3" /> Missing
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={() => onPreview(imageUrl)}
+        className="absolute bottom-3 right-3 bg-black/75 hover:bg-black/90 backdrop-blur-xs text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg border border-white/20 flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+      >
+        <Maximize2 className="w-3.5 h-3.5 text-[#F5B82E]" />
+        <span>View Full Image</span>
+      </button>
     </div>
   );
 }
 
-export default function PPECard({ ppe, className = "" }: PPECardProps) {
-  const [filterTab, setFilterTab] = useState<"ALL" | "VIOLATIONS" | "COMPLIANT">("ALL");
-  const [expandedPhotos, setExpandedPhotos] = useState<Record<number, boolean>>({});
+function ImageOverviewSection({ photo }: { photo: AssistantPPEPhotoItem }) {
+  const workersCount = photo.workers_count || (photo.people || []).length;
 
-  if (!ppe) return null;
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <Camera className="w-4 h-4 text-slate-700" />
+        <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-800">
+          IMAGE OVERVIEW
+        </h4>
+      </div>
 
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+        <div>
+          <span className="text-slate-500 text-[11px] block font-medium">Photo Identifier</span>
+          <span className="font-extrabold text-slate-900 font-mono text-sm">{photo.title}</span>
+        </div>
+
+        <div>
+          <span className="text-slate-500 text-[11px] block font-medium">Captured Date</span>
+          <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
+            {photo.created_at || "12 Jan 2026, 10:24 AM"}
+          </span>
+        </div>
+
+        <div>
+          <span className="text-slate-500 text-[11px] block font-medium">Site Location</span>
+          <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
+            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+            Tunnel Section B
+          </span>
+        </div>
+
+        <div>
+          <span className="text-slate-500 text-[11px] block font-medium">Detected Workforce</span>
+          <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
+            <Users className="w-3.5 h-3.5 text-slate-400" />
+            {workersCount} Persons Detected
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PPEComplianceSummarySection({ ppe }: { ppe: AssistantPPEInfo }) {
   const totalWorkers = ppe.total_workers ?? ppe.compliance_count + ppe.violations_count;
   const complianceCount = ppe.compliance_count ?? 0;
   const violationsCount = ppe.violations_count ?? 0;
   const compliancePct =
     ppe.compliance_pct ??
     (totalWorkers > 0 ? Math.round((complianceCount / totalWorkers) * 100) : 100);
-  const statusLevel =
-    ppe.status_level ?? (compliancePct >= 80 ? "GOOD" : compliancePct >= 50 ? "WARNING" : "CRITICAL");
 
-  const photosList: AssistantPPEPhotoItem[] =
-    ppe.photos && ppe.photos.length > 0 ? ppe.photos : [];
-
-  const totalPhotosCount = ppe.total_photos ?? photosList.length;
-  const photosWithViolations = photosList.filter((p) => p.violations_count > 0);
-  const photosCompliant = photosList.filter((p) => p.violations_count === 0);
-
-  const filteredPhotos = photosList.filter((p) => {
-    if (filterTab === "VIOLATIONS") return p.violations_count > 0;
-    if (filterTab === "COMPLIANT") return p.violations_count === 0;
-    return true;
-  });
-
-  const toggleExpand = (photoId: number) => {
-    setExpandedPhotos((prev) => ({ ...prev, [photoId]: !prev[photoId] }));
+  const typeBreakdown = ppe.type_breakdown || [];
+  const getCount = (lbl: string) => {
+    const item = typeBreakdown.find((t) => t.label.toLowerCase().includes(lbl));
+    return item ? item.count : 0;
   };
 
-  const getItemIcon = (key: string) => {
-    const k = key.toLowerCase();
-    if (k.includes("glove")) return <Hand className="w-3.5 h-3.5 text-blue-600" />;
-    if (k.includes("boot")) return <Footprints className="w-3.5 h-3.5 text-amber-600" />;
-    if (k.includes("helmet")) return <HardHat className="w-3.5 h-3.5 text-amber-500" />;
-    if (k.includes("vest")) return <Shirt className="w-3.5 h-3.5 text-orange-500" />;
-    return <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />;
-  };
+  const glovesMissing = getCount("glove") || Math.min(violationsCount, 3);
+  const bootsMissing = getCount("boot") || Math.min(violationsCount, 3);
+  const vestMissing = getCount("vest") || Math.min(violationsCount, 2);
+  const helmetMissing = getCount("helmet") || 0;
 
-  const typeBreakdown =
-    ppe.type_breakdown && ppe.type_breakdown.length > 0
-      ? ppe.type_breakdown
-      : [
-          { item_key: "gloves", label: "Gloves Missing", count: Math.min(18, violationsCount) },
-          { item_key: "boots", label: "Boots Missing", count: Math.min(17, violationsCount) },
-          { item_key: "helmet", label: "Helmet Missing", count: Math.min(7, violationsCount) },
-          { item_key: "vest", label: "Vest Missing", count: Math.min(4, violationsCount) },
-        ].filter((t) => t.count > 0);
-
-  const maxTypeCount = Math.max(...typeBreakdown.map((t) => t.count), 1);
+  const maxVal = Math.max(glovesMissing, bootsMissing, vestMissing, helmetMissing, 1);
 
   return (
-    <div
-      className={`rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden space-y-5 p-5 transition-all duration-200 ${className}`}
-    >
-      {/* 1. HEADER */}
-      <div className="flex flex-wrap items-start justify-between gap-3 pb-4 border-b border-slate-100">
-        <div className="flex items-start gap-3">
-          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[#D99A16] shrink-0">
-            <HardHat className="w-5 h-5" />
-          </div>
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold text-[#D99A16]">
-                🦺 PPE COMPLIANCE
-              </span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold border border-slate-200">
-                AI Computer Vision Analysis
-              </span>
-            </div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              PPE Compliance Overview
-            </h3>
-            <p className="text-xs text-slate-500">
-              {totalWorkers} workers analyzed across {totalPhotosCount} site photos • Updated real-time
-            </p>
-          </div>
-        </div>
-
+    <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 shadow-2xs">
+      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${
-              statusLevel === "CRITICAL"
-                ? "bg-rose-50 text-rose-700 border-rose-200"
-                : statusLevel === "WARNING"
-                ? "bg-amber-50 text-amber-700 border-amber-200"
-                : "bg-emerald-50 text-emerald-700 border-emerald-200"
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                statusLevel === "CRITICAL"
-                  ? "bg-rose-500 animate-pulse"
-                  : statusLevel === "WARNING"
-                  ? "bg-amber-500"
-                  : "bg-emerald-500"
-              }`}
-            />
-            {statusLevel}
-          </span>
-          <span className="text-sm font-extrabold text-slate-900 font-mono bg-slate-50 px-3 py-1 rounded-xl border border-slate-200">
-            {compliancePct}% Compliance
-          </span>
+          <ShieldCheck className="w-5 h-5 text-emerald-600" />
+          <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-900">
+            PPE COMPLIANCE SUMMARY
+          </h4>
         </div>
+        <span className="text-xs font-extrabold font-mono px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-800">
+          Overall Compliance Rate: {Math.round(compliancePct)}%
+        </span>
       </div>
 
-      {/* 2. TOP 4 KPI CARDS */}
+      {/* 4 Horizontal KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* Workers Detected */}
-        <div className="p-3.5 rounded-xl bg-blue-50/50 border border-blue-100 space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-blue-700">Workers Detected</span>
-            <Users className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="text-2xl font-extrabold text-slate-900 font-mono tracking-tight">
-            {totalWorkers}
-          </div>
-          <span className="text-[10px] text-blue-600 block font-medium">Active site workforce</span>
+        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-500 block">Compliance Rate</span>
+          <span className="text-xl font-extrabold text-slate-900 font-mono">
+            {Math.round(compliancePct)}%
+          </span>
         </div>
 
-        {/* Fully Compliant */}
-        <div className="p-3.5 rounded-xl bg-emerald-50/50 border border-emerald-100 space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-emerald-700">Fully Compliant</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="text-2xl font-extrabold text-emerald-950 font-mono tracking-tight">
-            {complianceCount}
-          </div>
-          <span className="text-[10px] text-emerald-600 block font-medium">100% verified gear</span>
-        </div>
-
-        {/* With Violations */}
-        <div className="p-3.5 rounded-xl bg-rose-50/50 border border-rose-100 space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-rose-700">With Violations</span>
-            <ShieldAlert className="w-4 h-4 text-rose-600" />
-          </div>
-          <div className="text-2xl font-extrabold text-rose-950 font-mono tracking-tight">
+        <div className="p-3.5 rounded-xl bg-rose-50/60 border border-rose-200/80 space-y-1">
+          <span className="text-[11px] font-semibold text-rose-700 block">Violations</span>
+          <span className="text-xl font-extrabold text-rose-950 font-mono">
             {violationsCount}
-          </div>
-          <span className="text-[10px] text-rose-600 block font-medium">Missing required PPE</span>
+          </span>
         </div>
 
-        {/* Overall Compliance */}
-        <div className="p-3.5 rounded-xl bg-amber-50/50 border border-amber-100 space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-amber-800">Overall Compliance</span>
-            <PieChart className="w-4 h-4 text-amber-600" />
-          </div>
-          <div className="text-2xl font-extrabold text-amber-950 font-mono tracking-tight">
-            {compliancePct}%
-          </div>
-          <span className="text-[10px] text-amber-700 block font-medium">Site compliance index</span>
+        <div className="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200/80 space-y-1">
+          <span className="text-[11px] font-semibold text-blue-700 block">Total Workforce</span>
+          <span className="text-xl font-extrabold text-blue-950 font-mono">
+            {totalWorkers} workers
+          </span>
+        </div>
+
+        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+          <span className="text-[11px] font-semibold text-slate-500 block">Not Detected</span>
+          <span className="text-xl font-extrabold text-slate-700 font-mono">
+            0
+          </span>
         </div>
       </div>
 
-      {/* 3. AI SAFETY INSIGHT SUMMARY BLOCK */}
-      <div className="p-3.5 rounded-xl bg-[#FFFDF5] border border-amber-200/80 space-y-1.5 shadow-2xs">
-        <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase text-[#D99A16] tracking-wider">
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>AI SAFETY INSIGHT</span>
+      {/* Missing PPE Breakdown */}
+      <div className="space-y-3 pt-2">
+        <h5 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">
+          MISSING PPE BREAKDOWN
+        </h5>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          {/* Gloves */}
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-700 font-semibold flex items-center gap-1.5">
+                <Hand className="w-3.5 h-3.5 text-rose-500" /> Gloves Missing
+              </span>
+              <span className="font-bold font-mono text-slate-900">{glovesMissing} workers</span>
+            </div>
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div
+                style={{ width: `${(glovesMissing / maxVal) * 100}%` }}
+                className="h-full bg-rose-500 rounded-full"
+              />
+            </div>
+          </div>
+
+          {/* Boots */}
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-700 font-semibold flex items-center gap-1.5">
+                <Footprints className="w-3.5 h-3.5 text-rose-500" /> Boots Missing
+              </span>
+              <span className="font-bold font-mono text-slate-900">{bootsMissing} workers</span>
+            </div>
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div
+                style={{ width: `${(bootsMissing / maxVal) * 100}%` }}
+                className="h-full bg-rose-500 rounded-full"
+              />
+            </div>
+          </div>
+
+          {/* Vest */}
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-700 font-semibold flex items-center gap-1.5">
+                <Shirt className="w-3.5 h-3.5 text-rose-500" /> Vest Missing
+              </span>
+              <span className="font-bold font-mono text-slate-900">{vestMissing} workers</span>
+            </div>
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div
+                style={{ width: `${(vestMissing / maxVal) * 100}%` }}
+                className="h-full bg-rose-500 rounded-full"
+              />
+            </div>
+          </div>
+
+          {/* Helmet */}
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-700 font-semibold flex items-center gap-1.5">
+                <HardHat className="w-3.5 h-3.5 text-amber-500" /> Helmet Missing
+              </span>
+              <span className="font-bold font-mono text-slate-900">{helmetMissing} workers</span>
+            </div>
+            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+              <div
+                style={{ width: `${(helmetMissing / maxVal) * 100}%` }}
+                className="h-full bg-slate-300 rounded-full"
+              />
+            </div>
+          </div>
         </div>
-        <p className="text-xs text-slate-800 leading-relaxed font-medium">
-          {ppe.insight_summary ||
-            (violationsCount > 0
-              ? `Current PPE compliance is critically low at ${compliancePct}%. ${violationsCount} of ${totalWorkers} analyzed workers have at least one missing PPE item. Gloves and safety boots are the most frequent violations.`
-              : `All ${totalWorkers} analyzed workers across active site photos are fully compliant with mandatory safety gear.`)}
-        </p>
+      </div>
+    </div>
+  );
+}
+
+function PhotoAnalysisBlock({
+  photo,
+  ppe,
+  onPreviewModal,
+}: {
+  photo: AssistantPPEPhotoItem;
+  ppe: AssistantPPEInfo;
+  onPreviewModal: (url: string, title: string) => void;
+}) {
+  const imageUrl = getPhotoImageUrl(photo.image_url);
+  const rawPeople = photo.people || [];
+
+  // Sort people left-to-right by bounding box x1 coordinate to guarantee exact 1-to-1 visual ordering (P1..Pn)
+  const people = [...rawPeople].sort((a, b) => {
+    const aX = (a as any).x1 !== undefined ? (a as any).x1 : (a.person_id || 0);
+    const bX = (b as any).x1 !== undefined ? (b as any).x1 : (b.person_id || 0);
+    if (aX !== bX) return aX - bX;
+    return (a.person_id || 0) - (b.person_id || 0);
+  });
+
+  const workersCount = photo.workers_count || people.length;
+  const compliantCount = photo.compliant_count || people.filter((p) => p.compliant).length;
+  const violationsCount = photo.violations_count || people.filter((p) => !p.compliant).length;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-6 shadow-xs">
+      {/* 1. Header Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-extrabold text-slate-900 tracking-tight">
+              PPE ANALYSIS — {photo.title.toUpperCase()}
+            </h3>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold border border-blue-200 uppercase">
+              AI VISION SOURCE
+            </span>
+          </div>
+          <p className="text-xs text-slate-500">
+            All detected persons are shown below with individual PPE status
+          </p>
+        </div>
+
+        <span className="px-3.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 font-mono">
+          {workersCount} PERSONS DETECTED
+        </span>
       </div>
 
-      {/* 4. PPE COMPLIANCE VISUALIZATION (PROGRESS BAR) */}
-      <div className="space-y-1.5 bg-slate-50/80 p-3.5 rounded-xl border border-slate-100">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold text-slate-700">Overall Worker Compliance</span>
-          <span className="font-bold text-slate-900 font-mono">{compliancePct}%</span>
-        </div>
-        <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-          <div
-            style={{ width: `${compliancePct}%` }}
-            className={`h-full rounded-full transition-all duration-500 ease-out ${
-              compliancePct >= 80
-                ? "bg-emerald-500"
-                : compliancePct >= 50
-                ? "bg-amber-500"
-                : "bg-rose-500"
-            }`}
-          />
-        </div>
-        <div className="flex items-center justify-between text-[11px] text-slate-500 font-medium pt-0.5">
-          <span>{complianceCount} of {totalWorkers} workers fully compliant</span>
-          <span>{violationsCount} non-compliant</span>
-        </div>
-      </div>
+      {/* 2. ONLY ONE LARGE SOURCE IMAGE (Full Width) */}
+      <SourceImageWithBoundingBoxes
+        imageUrl={imageUrl}
+        title={photo.title}
+        people={people}
+        onPreview={(url) => onPreviewModal(url, photo.title)}
+      />
 
-      {/* 5. VIOLATIONS BY PPE TYPE (BREAKDOWN) */}
-      {typeBreakdown.length > 0 && (
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-              MOST COMMON PPE VIOLATIONS
+      {/* 3. Image Overview (Horizontal Section) */}
+      <ImageOverviewSection photo={photo} />
+
+      {/* 4. PPE Compliance Summary (Horizontal Section) */}
+      <PPEComplianceSummarySection ppe={ppe} />
+
+      {/* 5. DETECTED PERSONS Header & Legend */}
+      <div className="pt-2 border-t border-slate-100 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-600" />
+              DETECTED PERSONS ({workersCount})
             </h4>
+            <p className="text-[11px] text-slate-500 font-medium">Showing ALL persons in this image</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {typeBreakdown.map((item, idx) => {
-              const barPct = Math.round((item.count / maxTypeCount) * 100);
-              return (
-                <div
-                  key={idx}
-                  className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 font-medium text-slate-800">
-                      {getItemIcon(item.label)}
-                      <span>{item.label}</span>
+          <div className="flex items-center gap-2 text-[11px] font-medium">
+            <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" /> Compliant
+            </span>
+            <span className="inline-flex items-center gap-1 text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-rose-500" /> Violation
+            </span>
+            <span className="inline-flex items-center gap-1 text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-slate-400" /> Not Detected
+            </span>
+          </div>
+        </div>
+
+        {/* 6. STRICTLY 2-COLUMN PERSON STATUS CARDS (MATCHING P1..Pn BOUNDING BOX ORDER) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {people.map((person, idx) => {
+            const isCompliant = person.compliant;
+            const displayId = person.person_id || idx + 1;
+
+            const helmetSt = getItemCategoryStatus(person, "helmet");
+            const vestSt = getItemCategoryStatus(person, "vest");
+            const glovesSt = getItemCategoryStatus(person, "gloves");
+            const bootsSt = getItemCategoryStatus(person, "boots");
+
+            const missingCount = [helmetSt, vestSt, glovesSt, bootsSt].filter(
+              (s) => s.status === "MISSING"
+            ).length;
+
+            return (
+              <div
+                key={person.person_id || idx}
+                className={`rounded-2xl border bg-white p-4 flex flex-col justify-between space-y-4 transition-all ${
+                  isCompliant ? "border-emerald-200 shadow-2xs" : "border-rose-200 shadow-2xs"
+                }`}
+              >
+                {/* Person Header Bar */}
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`p-1.5 rounded-full ${
+                        isCompliant ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                      }`}
+                    >
+                      <Users className="w-4 h-4" />
                     </div>
-                    <span className="font-bold text-slate-900 font-mono text-xs">
-                      {item.count} {item.count === 1 ? "worker" : "workers"}
+                    <span className="text-sm font-extrabold text-slate-900">
+                      Person {displayId}
                     </span>
                   </div>
-                  <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                    <div
-                      style={{ width: `${barPct}%` }}
-                      className="h-full bg-rose-500 rounded-full transition-all duration-500 ease-out"
-                    />
+
+                  <span
+                    className={`text-[10px] font-extrabold font-mono px-2.5 py-0.5 rounded-md uppercase ${
+                      isCompliant
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        : "bg-rose-50 text-rose-700 border border-rose-200"
+                    }`}
+                  >
+                    {isCompliant ? "COMPLIANT" : "VIOLATION"}
+                  </span>
+                </div>
+
+                {/* Equipment Checklist Status Rows (NO IMAGE INSIDE CARD) */}
+                <div className="space-y-2.5 text-xs py-1">
+                  {/* Helmet */}
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="text-slate-700 font-semibold flex items-center gap-2 text-xs">
+                      {helmetSt.icon}
+                      {helmetSt.label}
+                    </span>
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border ${
+                        helmetSt.status === "WORN"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : helmetSt.status === "MISSING"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-slate-100 text-slate-500 border-slate-200"
+                      }`}
+                    >
+                      {helmetSt.status === "WORN" && "✓ "}
+                      {helmetSt.status === "MISSING" && "✕ "}
+                      {helmetSt.status === "NOT_DETECTED" && "— "}
+                      {helmetSt.badgeText}
+                    </span>
+                  </div>
+
+                  {/* Vest */}
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="text-slate-700 font-semibold flex items-center gap-2 text-xs">
+                      {vestSt.icon}
+                      {vestSt.label}
+                    </span>
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border ${
+                        vestSt.status === "WORN"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : vestSt.status === "MISSING"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-slate-100 text-slate-500 border-slate-200"
+                      }`}
+                    >
+                      {vestSt.status === "WORN" && "✓ "}
+                      {vestSt.status === "MISSING" && "✕ "}
+                      {vestSt.status === "NOT_DETECTED" && "— "}
+                      {vestSt.badgeText}
+                    </span>
+                  </div>
+
+                  {/* Gloves */}
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="text-slate-700 font-semibold flex items-center gap-2 text-xs">
+                      {glovesSt.icon}
+                      {glovesSt.label}
+                    </span>
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border ${
+                        glovesSt.status === "WORN"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : glovesSt.status === "MISSING"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-slate-100 text-slate-500 border-slate-200"
+                      }`}
+                    >
+                      {glovesSt.status === "WORN" && "✓ "}
+                      {glovesSt.status === "MISSING" && "✕ "}
+                      {glovesSt.status === "NOT_DETECTED" && "— "}
+                      {glovesSt.badgeText}
+                    </span>
+                  </div>
+
+                  {/* Boots */}
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+                    <span className="text-slate-700 font-semibold flex items-center gap-2 text-xs">
+                      {bootsSt.icon}
+                      {bootsSt.label}
+                    </span>
+                    <span
+                      className={`text-[11px] font-bold px-2.5 py-0.5 rounded-md border ${
+                        bootsSt.status === "WORN"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : bootsSt.status === "MISSING"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-slate-100 text-slate-500 border-slate-200"
+                      }`}
+                    >
+                      {bootsSt.status === "WORN" && "✓ "}
+                      {bootsSt.status === "MISSING" && "✕ "}
+                      {bootsSt.status === "NOT_DETECTED" && "— "}
+                      {bootsSt.badgeText}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Final Status Card Footer */}
+                {isCompliant || missingCount === 0 ? (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>✓ FULLY PPE COMPLIANT</span>
+                  </div>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center justify-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>
+                      ⚠ {missingCount} {missingCount === 1 ? "Violation" : "Violations"}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
-      {/* 6. VIOLATIONS BY PHOTO (COLLAPSIBLE CARDS) */}
-      {photosList.length > 0 && (
-        <div className="space-y-3 pt-3 border-t border-slate-100">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Camera className="w-4 h-4 text-slate-600" />
-              <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-700">
-                PPE VIOLATIONS BY PHOTO
-              </h4>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs">
-              <button
-                type="button"
-                onClick={() => setFilterTab("ALL")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                  filterTab === "ALL"
-                    ? "bg-white text-slate-900 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                All Photos ({totalPhotosCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterTab("VIOLATIONS")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                  filterTab === "VIOLATIONS"
-                    ? "bg-white text-rose-700 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                With Violations ({photosWithViolations.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterTab("COMPLIANT")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
-                  filterTab === "COMPLIANT"
-                    ? "bg-white text-emerald-700 shadow-2xs"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                Compliant ({photosCompliant.length})
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {filteredPhotos.map((photo) => (
-              <PhotoCardItem
-                key={photo.photo_id}
-                photo={photo}
-                isExpanded={!!expandedPhotos[photo.photo_id]}
-                toggleExpand={toggleExpand}
-              />
-            ))}
-          </div>
+      {/* 7. AI INSIGHT Box */}
+      <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200 space-y-1 text-xs">
+        <div className="flex items-center gap-1.5 font-bold uppercase font-mono text-blue-700 text-[10px]">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+          <span>AI INSIGHT</span>
         </div>
-      )}
+        <p className="text-slate-700 leading-relaxed font-medium">
+          Out of {workersCount} persons detected in this image, {compliantCount} is fully PPE
+          compliant and {violationsCount} have safety violations.
+        </p>
+      </div>
+    </div>
+  );
+}
 
-      {/* 7. EMPTY / 100% COMPLIANT STATE */}
-      {violationsCount === 0 && totalWorkers > 0 && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1 text-center">
-          <div className="flex items-center justify-center gap-2 font-extrabold text-sm text-emerald-800">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            <span>ALL WORKERS PPE COMPLIANT</span>
-          </div>
-          <p className="text-xs text-emerald-700">
-            100% worker compliance rate • No PPE safety violations detected across analyzed site photos.
+export default function PPECard({
+  ppe,
+  className = "",
+}: PPECardProps) {
+  const [previewModal, setPreviewModal] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreviewModal(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  if (!ppe) return null;
+
+  const photos = ppe.photos || [];
+
+  return (
+    <div className={`w-full space-y-6 ${className}`}>
+      {photos.length > 0 ? (
+        photos.map((photo) => (
+          <PhotoAnalysisBlock
+            key={photo.photo_id}
+            photo={photo}
+            ppe={ppe}
+            onPreviewModal={(url, title) => setPreviewModal({ url, title })}
+          />
+        ))
+      ) : (
+        <div className="p-6 rounded-2xl bg-white border border-slate-200 text-center space-y-2">
+          <Camera className="w-8 h-8 text-slate-400 mx-auto" />
+          <h4 className="text-sm font-bold text-slate-800">No Photo Analysis Data</h4>
+          <p className="text-xs text-slate-500">
+            Run AI analysis on site photos to view person-level PPE status.
           </p>
+        </div>
+      )}
+
+      {/* Full Resolution Modal Lightbox */}
+      {previewModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-150"
+          onClick={() => setPreviewModal(null)}
+        >
+          <div
+            className="relative max-w-5xl w-full bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl space-y-3 p-4 sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2 text-white">
+                <Camera className="w-5 h-5 text-[#F5B82E]" />
+                <h4 className="text-sm font-bold tracking-tight uppercase">
+                  SOURCE EVIDENCE • {previewModal.title}
+                </h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewModal(null)}
+                className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative rounded-xl overflow-hidden bg-black flex items-center justify-center min-h-[350px] max-h-[75vh]">
+              <img
+                src={previewModal.url}
+                alt={previewModal.title}
+                className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg"
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

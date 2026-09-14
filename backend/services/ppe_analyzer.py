@@ -277,6 +277,10 @@ def build_person_ppe_report(detections: List[Dict[str, Any]]) -> Tuple[List[Dict
         people.append({
             "person_id": p["person_id"],
             "confidence": p["confidence"],
+            "x1": p["x1"],
+            "y1": p["y1"],
+            "x2": p["x2"],
+            "y2": p["y2"],
             "helmet": {"detected": helmet_det, "confidence": helmet_conf},
             "vest": {"detected": vest_det, "confidence": vest_conf},
             "gloves": {"detected": gloves_det, "confidence": gloves_conf},
@@ -332,6 +336,7 @@ def get_project_ppe_summary(
     all_people = []
     violations_summary_list = []
     compliance_summary_list = []
+    photos_list = []
     
     for photo in photos:
         latest_run = (
@@ -365,6 +370,15 @@ def get_project_ppe_summary(
                 for d in latest_run.detections
             ]
             people, summary = build_person_ppe_report(dets_dicts)
+
+        person_dets = [d for d in (latest_run.detections or []) if d.class_name.lower() in ('person', 'worker')]
+        person_dets.sort(key=lambda d: d.x1)
+        for idx, p in enumerate(people):
+            if "x1" not in p and idx < len(person_dets):
+                p["x1"] = person_dets[idx].x1
+                p["y1"] = person_dets[idx].y1
+                p["x2"] = person_dets[idx].x2
+                p["y2"] = person_dets[idx].y2
             
         workers_cnt = summary.get("workers_detected", 0)
         compliant_cnt = summary.get("fully_compliant", 0)
@@ -387,6 +401,40 @@ def get_project_ppe_summary(
                 viols_str = ", ".join(viols) if viols else "Unspecified PPE Violation"
                 violations_summary_list.append(f"Photo #{photo.id} - Person {p_id}: {viols_str}")
 
+        img_url = photo.file_path
+        if img_url and not img_url.startswith("/") and not img_url.startswith("http"):
+            img_url = "/" + img_url
+
+        viol_counts = {}
+        for p in people:
+            for v in p.get("violations", []):
+                viol_counts[v] = viol_counts.get(v, 0) + 1
+        missing_parts = [f"{k}: {v} workers" for k, v in viol_counts.items()]
+        missing_summary = ", ".join(missing_parts) if missing_parts else "All workers fully compliant"
+
+        photos_list.append({
+            "photo_id": photo.id,
+            "title": f"PHOTO #{photo.id}",
+            "image_url": img_url,
+            "created_at": photo.created_at.strftime("%d %b %Y, %I:%M %p") if photo.created_at else None,
+            "workers_count": workers_cnt,
+            "compliant_count": compliant_cnt,
+            "violations_count": violating_cnt,
+            "compliance_pct": summary.get("overall_compliance", 100.0 if workers_cnt == 0 else round((compliant_cnt / max(1, workers_cnt)) * 100, 1)),
+            "missing_summary": missing_summary,
+            "people": people,
+            "detections": [
+                {
+                    "class_name": d.class_name,
+                    "confidence": d.confidence,
+                    "x1": d.x1,
+                    "y1": d.y1,
+                    "x2": d.x2,
+                    "y2": d.y2
+                } for d in latest_run.detections
+            ] if hasattr(latest_run, "detections") and latest_run.detections else []
+        })
+
     overall_compliance = round((total_compliant / total_workers * 100), 1) if total_workers > 0 else 100.0
 
     return {
@@ -401,5 +449,7 @@ def get_project_ppe_summary(
         "overall_compliance": overall_compliance,
         "violations_list": violations_summary_list,
         "compliance_list": compliance_summary_list,
-        "people": all_people
+        "people": all_people,
+        "photos": photos_list
     }
+

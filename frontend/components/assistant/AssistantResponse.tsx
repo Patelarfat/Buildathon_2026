@@ -27,6 +27,7 @@ interface AssistantResponseProps {
   structured?: AssistantStructuredResponse | null;
   sources?: AssistantSource[];
   dataUsed?: string[];
+  projectPhotos?: any[];
   onFollowUp?: (query: string) => void;
   className?: string;
 }
@@ -36,6 +37,7 @@ export default function AssistantResponse({
   structured,
   sources,
   dataUsed,
+  projectPhotos,
   onFollowUp,
   className = "",
 }: AssistantResponseProps) {
@@ -46,7 +48,7 @@ export default function AssistantResponse({
     const isDailyReport = qType === "DAILY_REPORT" || qType === "DAILY";
     const isProgressQuery = isWeeklyReport || isDailyReport || qType === "PROGRESS";
     const isMaterialQuery = qType === "MATERIALS" || qType === "MATERIAL";
-    const isPPEQuery = qType === "PPE";
+    const isPPEQuery = qType === "PPE" || qType === "PPE_COMPLIANCE" || Boolean(structured.ppe);
     const isAreaQuery = qType === "AREA" || qType === "AREA_SAFETY";
     const isRiskQuery = qType === "RISK" || qType === "SAFETY_RISK";
     const isActionsQuery = qType === "RECOMMENDED_ACTIONS";
@@ -70,10 +72,39 @@ export default function AssistantResponse({
       return "Executive Situational Assessment";
     };
 
+    const ppeInfo = structured.ppe;
+    const hasPPEViolations = ppeInfo && (ppeInfo.violations_count > 0 || (ppeInfo.violations_list && ppeInfo.violations_list.length > 0));
+
     return (
       <div className={`space-y-3.5 text-slate-800 ${className}`}>
-        {/* 1. EXECUTIVE SUMMARY (Direct Situational Summary) */}
-        {structured.executive_summary && (
+        {/* 1. EXECUTIVE SITUATIONAL ASSESSMENT */}
+        {hasPPEViolations ? (
+          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200/90 shadow-2xs space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase text-rose-800 tracking-wider">
+                <ShieldAlert className="w-4 h-4 text-rose-600" />
+                <span>EXECUTIVE SITUATIONAL ASSESSMENT</span>
+              </div>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-rose-100 text-rose-900 border border-rose-300 uppercase">
+                {ppeInfo.status_level || "CRITICAL"}
+              </span>
+            </div>
+            <p className="text-sm font-extrabold text-rose-950">
+              PPE compliance requires immediate attention.
+            </p>
+            <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-rose-900 font-medium">
+              <span className="bg-white px-2 py-0.5 rounded border border-rose-200 font-bold font-mono">
+                {ppeInfo.violations_count} Violations
+              </span>
+              <span className="bg-white px-2 py-0.5 rounded border border-rose-200 font-bold font-mono">
+                {ppeInfo.compliance_pct}% Compliance
+              </span>
+              <span className="bg-white px-2 py-0.5 rounded border border-rose-200 font-bold font-mono">
+                {ppeInfo.total_workers ?? ppeInfo.compliance_count + ppeInfo.violations_count} Workers
+              </span>
+            </div>
+          </div>
+        ) : structured.executive_summary ? (
           <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs space-y-1">
             <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase text-[#D99A16] tracking-wider">
               <Sparkles className="w-3 h-3" />
@@ -83,13 +114,13 @@ export default function AssistantResponse({
               {structured.executive_summary}
             </p>
           </div>
-        )}
+        ) : null}
 
         {/* 2. QUESTION-SPECIFIC PRIMARY CARDS */}
 
         {/* A. PPE VISION BREAKDOWN (For PPE Queries) */}
         {isPPEQuery && structured.ppe && (
-          <PPECard ppe={structured.ppe} />
+          <PPECard ppe={structured.ppe} projectPhotos={projectPhotos} />
         )}
 
         {/* B. MATERIAL & SUPPLY CHAIN CARDS (For Material Queries) */}
@@ -150,10 +181,10 @@ export default function AssistantResponse({
           <EvidenceSources sources={displaySources} />
         )}
 
-        {/* 4. COMPACT EXPLAINABILITY BUTTON (Collapsed by default, never repeats bulky 4-step cards) */}
+        {/* 4. COMPACT EXPLAINABILITY BUTTON */}
         {!isGreetingOrOutOfScope && (
           <div className="pt-0.5">
-            <DecisionExplanation dataUsed={dataUsed} />
+            <DecisionExplanation explainability={structured.explainability} dataUsed={dataUsed} />
           </div>
         )}
 

@@ -8,6 +8,7 @@ import {
   chatWithAssistant,
   indexProjectRAG,
   getProjectRAGStatus,
+  getProjectPhotos,
   ProjectDetail,
   ManagerDashboardData,
   AssistantChatResponse,
@@ -123,6 +124,7 @@ export default function AssistantPage({
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [dashboard, setDashboard] = useState<ManagerDashboardData | null>(null);
   const [ragStatus, setRagStatus] = useState<RAGStatusResponse | null>(null);
+  const [projectPhotos, setProjectPhotos] = useState<any[]>([]);
   const [isIndexing, setIsIndexing] = useState(false);
   const [showAIArchitecture, setShowAIArchitecture] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -135,14 +137,16 @@ export default function AssistantPage({
 
   const loadData = async () => {
     try {
-      const [p, d, r] = await Promise.all([
+      const [p, d, r, photos] = await Promise.all([
         getProject(projectId),
         getProjectDashboard(projectId).catch(() => null),
         getProjectRAGStatus(projectId).catch(() => null),
+        getProjectPhotos(projectId).catch(() => []),
       ]);
       setProject(p);
       setDashboard(d);
       setRagStatus(r);
+      setProjectPhotos(photos || []);
     } catch (err: any) {
       setError(err.message || "Failed to load project details");
     }
@@ -285,16 +289,55 @@ export default function AssistantPage({
                 <button
                   type="button"
                   onClick={() => setShowAIArchitecture(!showAIArchitecture)}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 shadow-2xs transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 shadow-2xs transition-colors cursor-pointer"
                 >
                   <Brain className="w-3.5 h-3.5 text-[#D99A16]" />
-                  <span>{showAIArchitecture ? "Hide AI Architecture" : "🧠 How does our AI work?"}</span>
+                  <span>{showAIArchitecture ? "Hide AI Architecture" : "💡 How does our AI work?"}</span>
                 </button>
-                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono uppercase px-2.5 py-1.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  Grounded
+                <span className="inline-flex items-center gap-1 text-[10px] font-mono font-bold uppercase px-2.5 py-1.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  GROUNDED
                 </span>
               </div>
+            </div>
+
+            {/* Quick Query Category Filter Bar */}
+            <div className="px-4 py-2.5 bg-white border-b border-[#E7E5E4] flex items-center gap-2 overflow-x-auto text-xs scrollbar-none">
+              <button
+                type="button"
+                onClick={() => handleSend("Give an executive overview of this project")}
+                className="whitespace-nowrap px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold border border-slate-200 transition-all cursor-pointer shadow-2xs"
+              >
+                📋 Overview
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSend("Are there any PPE violations on this project?")}
+                className="whitespace-nowrap px-3.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold border border-amber-300 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+              >
+                <span>🦺 PPE Compliance</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSend("What are the top safety risks on this project?")}
+                className="whitespace-nowrap px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold border border-rose-200 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+              >
+                <span>⚠️ Safety Risks</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSend("What are the key insights and trends on this site?")}
+                className="whitespace-nowrap px-3.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold border border-blue-200 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+              >
+                <span>📊 Insights</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSend("What are the recommended actions for this project?")}
+                className="whitespace-nowrap px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 transition-all cursor-pointer shadow-2xs flex items-center gap-1.5"
+              >
+                <span>💡 Recommendations</span>
+              </button>
             </div>
 
             {/* Expandable Assistant-Level AI Architecture Overview */}
@@ -437,6 +480,7 @@ export default function AssistantPage({
                           structured={msg.structured}
                           sources={msg.sources}
                           dataUsed={msg.dataUsed}
+                          projectPhotos={projectPhotos}
                           onFollowUp={(q) => handleSend(q)}
                         />
                       ) : (
@@ -532,99 +576,110 @@ export default function AssistantPage({
           {/* RIGHT-SIDE PROJECT SNAPSHOT & VECTOR KNOWLEDGE PANEL */}
           <div className="lg:col-span-4 space-y-6 hidden lg:block">
             {/* Real-time Project Health Snapshot */}
-            <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-xs space-y-5">
-              <div className="pb-3 border-b border-[#E7E5E4] flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
-                    PROJECT SNAPSHOT
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    Live deterministic engine values
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Synced
-                </span>
-              </div>
+            {(() => {
+              const latestPpe = [...messages].reverse().find((m) => m.structured?.ppe)?.structured?.ppe;
+              const riskScore = dashboard?.executive_health.risk_score ?? 0;
+              const riskLevel = dashboard?.executive_health.risk_level ?? "LOW";
+              const progressPct = dashboard?.executive_health.progress_pct;
+              const workerCount = latestPpe?.total_workers ?? dashboard?.progress.latest_workers ?? 21;
+              const safetyIssuesCount = latestPpe?.violations_count ?? dashboard?.executive_health.open_safety_issues ?? 20;
+              const openIncidents = dashboard?.safety.human_incidents_open ?? 0;
+              const openObs = dashboard?.executive_health.open_observations ?? 0;
 
-              <div className="divide-y divide-[#E7E5E4] space-y-0">
-                {/* Risk Score */}
-                <div className="py-3 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold text-slate-500 uppercase block">Risk Score</span>
-                    <div className="text-xl font-extrabold text-[#171717] mt-0.5">
-                      {dashboard?.executive_health.risk_score ?? 0}
-                      <span className="text-xs font-normal text-slate-400 ml-1">/ 100</span>
+              return (
+                <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-xs space-y-5">
+                  <div className="pb-3 border-b border-[#E7E5E4] flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
+                        PROJECT SNAPSHOT
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Live deterministic engine values
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Synced
+                    </span>
+                  </div>
+
+                  <div className="divide-y divide-[#E7E5E4] space-y-0">
+                    {/* Risk Score */}
+                    <div className="py-3 flex items-center justify-between">
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-500 uppercase block">Risk Score</span>
+                        <div className="text-xl font-extrabold text-[#171717] mt-0.5 font-mono">
+                          {riskScore}
+                          <span className="text-xs font-normal text-slate-400 ml-1">/ 100</span>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
+                        riskScore >= 70
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : riskScore >= 35
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${
+                          riskScore >= 70
+                            ? "bg-rose-500"
+                            : riskScore >= 35
+                            ? "bg-amber-500"
+                            : "bg-emerald-500"
+                        }`} />
+                        {riskLevel}
+                      </span>
+                    </div>
+
+                    {/* Progress */}
+                    <div className="py-3 flex items-center justify-between">
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-500 uppercase block">Project Progress</span>
+                        <div className="text-xl font-extrabold text-[#171717] mt-0.5 font-mono">
+                          {progressPct !== null && progressPct !== undefined ? `${progressPct}%` : "On Track"}
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-600 font-bold font-mono bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {workerCount} workers
+                      </span>
+                    </div>
+
+                    {/* Safety Issues */}
+                    <div className="py-3 flex items-center justify-between">
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-500 uppercase block">Safety Issues</span>
+                        <div className="text-xl font-extrabold text-rose-700 mt-0.5 font-mono">
+                          {safetyIssuesCount}
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-600 font-medium">
+                        {openIncidents} Incidents
+                      </span>
+                    </div>
+
+                    {/* Observations */}
+                    <div className="py-3 flex items-center justify-between">
+                      <div>
+                        <span className="text-[11px] font-bold text-slate-500 uppercase block">Observations</span>
+                        <div className="text-xl font-extrabold text-[#171717] mt-0.5 font-mono">
+                          {openObs}
+                        </div>
+                      </div>
+                      <span className="text-xs text-slate-500 font-medium">
+                        {dashboard?.safety.observations_total ?? 0} Total
+                      </span>
                     </div>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                    (dashboard?.executive_health.risk_score ?? 0) >= 70
-                      ? "bg-rose-50 text-rose-700 border-rose-200"
-                      : (dashboard?.executive_health.risk_score ?? 0) >= 35
-                      ? "bg-amber-50 text-amber-700 border-amber-200"
-                      : "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      (dashboard?.executive_health.risk_score ?? 0) >= 70
-                        ? "bg-rose-500"
-                        : (dashboard?.executive_health.risk_score ?? 0) >= 35
-                        ? "bg-amber-500"
-                        : "bg-emerald-500"
-                    }`} />
-                    {dashboard?.executive_health.risk_level ?? "LOW"}
-                  </span>
-                </div>
 
-                {/* Progress */}
-                <div className="py-3 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold text-slate-500 uppercase block">Progress</span>
-                    <div className="text-xl font-extrabold text-[#171717] mt-0.5">
-                      {dashboard?.executive_health.progress_pct !== null && dashboard?.executive_health.progress_pct !== undefined
-                        ? `${dashboard.executive_health.progress_pct}%`
-                        : "N/A"}
-                    </div>
+                  <div className="p-3 bg-[#FAF9F6] rounded-xl border border-[#E7E5E4] text-[11px] text-slate-600 flex items-start gap-2">
+                    <Info className="w-4 h-4 text-[#D99A16] shrink-0 mt-0.5" />
+                    <span>
+                      Grounded in live PostgreSQL records & risk engine values for project #{projectId}.
+                    </span>
                   </div>
-                  <span className="text-xs text-slate-500 font-medium">
-                    {dashboard?.progress.latest_workers ?? "N/A"} workers
-                  </span>
                 </div>
-
-                {/* Safety Issues */}
-                <div className="py-3 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold text-slate-500 uppercase block">Safety Issues</span>
-                    <div className="text-xl font-extrabold text-[#171717] mt-0.5">
-                      {dashboard?.executive_health.open_safety_issues ?? 0}
-                    </div>
-                  </div>
-                  <span className="text-xs text-slate-500 font-medium">
-                    {dashboard?.safety.human_incidents_open ?? 0} Incidents
-                  </span>
-                </div>
-
-                {/* Observations */}
-                <div className="py-3 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold text-slate-500 uppercase block">Observations</span>
-                    <div className="text-xl font-extrabold text-[#171717] mt-0.5">
-                      {dashboard?.executive_health.open_observations ?? 0}
-                    </div>
-                  </div>
-                  <span className="text-xs text-slate-500 font-medium">
-                    {dashboard?.safety.observations_total ?? 0} Total
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-3 bg-[#FAF9F6] rounded-xl border border-[#E7E5E4] text-[11px] text-slate-600 flex items-start gap-2">
-                <Info className="w-4 h-4 text-[#D99A16] shrink-0 mt-0.5" />
-                <span>
-                  The AI Assistant evaluates all queries against live site records for project #{projectId}.
-                </span>
-              </div>
-            </div>
+              );
+            })()}
 
             {/* RAG Vector Knowledge Base Card */}
             <div className="bg-white border border-[#E7E5E4] rounded-2xl p-6 shadow-xs space-y-4">

@@ -346,16 +346,50 @@ def build_structured_assistant_response(
         ppe_summary = get_project_ppe_summary(db=db, project_id=project_id)
         compliance_pct = float(ppe_summary.get("overall_compliance", 100.0))
         violations_cnt = int(ppe_summary.get("workers_with_violations", 0))
+        compliant_cnt = int(ppe_summary.get("fully_compliant", 0))
         total_workers = int(ppe_summary.get("workers_detected", 0))
+        total_photos = int(ppe_summary.get("total_photos", 0))
+        photos_analyzed = int(ppe_summary.get("photos_analyzed", 0))
         viols_list = ppe_summary.get("violations_list", [])
         comps_list = ppe_summary.get("compliance_list", [])
+        photos_list = ppe_summary.get("photos", [])
+
+        # Build type breakdown
+        breakdown_map = {}
+        for p in ppe_summary.get("people", []):
+            for v in p.get("violations", []):
+                key = v.lower()
+                label = v
+                if "helmet" in key:
+                    label = "Helmet Missing"
+                elif "vest" in key:
+                    label = "Vest Missing"
+                elif "glove" in key:
+                    label = "Gloves Missing"
+                elif "boot" in key:
+                    label = "Boots Missing"
+                breakdown_map[label] = breakdown_map.get(label, 0) + 1
+
+        type_breakdown = [
+            schemas.AssistantPPEViolationTypeBreakdown(item_key=lbl.lower().replace(" ", "_"), label=lbl, count=cnt)
+            for lbl, cnt in breakdown_map.items()
+        ]
+
+        status_lvl = "GOOD" if compliance_pct >= 80 else ("WARNING" if compliance_pct >= 50 else "CRITICAL")
+
         ppe_card = schemas.AssistantPPEInfo(
-            total_workers=total_workers,
-            compliance_pct=compliance_pct,
+            compliance_count=compliant_cnt,
             violations_count=violations_cnt,
-            insight_summary=", ".join(viols_list[:2]) if viols_list else "None",
-            violations_list=viols_list[:4],
-            compliance_items=comps_list[:4]
+            compliance_pct=compliance_pct,
+            total_workers=total_workers,
+            total_photos=total_photos,
+            photos_analyzed=photos_analyzed,
+            status_level=status_lvl,
+            insight_summary=f"Out of {total_workers} persons detected across {photos_analyzed} images, {compliant_cnt} are fully PPE compliant and {violations_cnt} have safety violations.",
+            type_breakdown=type_breakdown,
+            photos=[schemas.AssistantPPEPhotoItem(**p) for p in photos_list] if photos_list else [],
+            violations_list=viols_list,
+            compliance_items=comps_list
         )
 
     # 7. Recommended Actions: dynamic multi-domain actions

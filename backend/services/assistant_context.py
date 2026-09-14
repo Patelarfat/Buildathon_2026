@@ -25,7 +25,7 @@ from services.ppe_constants import AI_PPE_COMPLIANCE_TYPES, AI_PPE_VIOLATION_TYP
 from services.ppe_analyzer import get_project_ppe_summary
 from services.rag.retriever import SemanticRetriever
 from services.rag.evidence_grouper import EvidenceGrouper, EvidenceGroup
-from services.query_understanding import analyze_query, QueryUnderstanding
+from services.query_understanding import analyze_query, QueryUnderstanding, QueryRequirements
 from services.query_expansion import QueryExpansionService, ExpandedQueryPlan
 
 logger = logging.getLogger(__name__)
