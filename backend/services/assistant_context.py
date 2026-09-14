@@ -285,9 +285,11 @@ def retrieve_assistant_context(
 
     areas = db.query(models.Area).join(models.Site).filter(models.Site.project_id == project_id).all()
     matched_area_ids = []
+    matched_area_names = []
     for area in areas:
         if area.name.lower() in query_lower:
             matched_area_ids.append(area.id)
+            matched_area_names.append(area.name)
 
     matched_area_id = matched_area_ids[0] if len(matched_area_ids) == 1 else None
 
@@ -541,19 +543,34 @@ def retrieve_assistant_context(
     # E. MATERIALS QUERY
     elif intent == "MATERIALS":
         mat_q = db.query(models.Material).filter(models.Material.project_id == project_id)
-        mat_records = mat_q.order_by(models.Material.id.desc()).limit(10).all()
-        mat_bullets = []
+        mat_records = mat_q.order_by(models.Material.id.desc()).all()
+        
+        # Check if query asks for a specific material
+        specific_mat_found = None
         for m in mat_records:
+            if m.material_name.lower() in query_lower:
+                specific_mat_found = m
+                break
+        
+        mat_bullets = []
+        if specific_mat_found:
+            m = specific_mat_found
             mat_bullets.append(
-                f"- Material #{m.id}: {m.material_name} ({m.category or 'General'}) - Qty: {m.quantity} {m.unit} (Status: {m.status}). Supplier: {m.supplier or 'N/A'}. Notes: {m.notes or 'None'}"
+                f"- Specific Material Match: {m.material_name} ({m.category or 'General'}) - Current Stock: {m.quantity} {m.unit} (Status: {m.status}). Supplier: {m.supplier or 'N/A'}. Notes: {m.notes or 'None'}"
             )
-            add_source("MATERIAL", str(m.id), f"Material: {m.material_name}", f"Status: {m.status} ({m.quantity} {m.unit})")
+            add_source("MATERIAL", str(m.id), f"Material: {m.material_name}", f"Stock: {m.quantity} {m.unit} · Status: {m.status}")
             data_used.append("materials")
-
-        if mat_bullets:
-            context_sections.append("MATERIALS & INVENTORY DETAIL (SQL):\n" + "\n".join(mat_bullets))
+        elif mat_records:
+            for m in mat_records[:10]:
+                mat_bullets.append(
+                    f"- Material #{m.id}: {m.material_name} ({m.category or 'General'}) - Qty: {m.quantity} {m.unit} (Status: {m.status}). Supplier: {m.supplier or 'N/A'}. Notes: {m.notes or 'None'}"
+                )
+                add_source("MATERIAL", str(m.id), f"Material: {m.material_name}", f"Status: {m.status} ({m.quantity} {m.unit})")
+                data_used.append("materials")
         else:
-            context_sections.append("MATERIALS & INVENTORY DETAIL (SQL):\n- No material records or shortages found in project database.")
+            mat_bullets.append("No material records or inventory found in project database.")
+
+        context_sections.append("MATERIALS & INVENTORY DETAIL (SQL):\n" + "\n".join(mat_bullets))
 
     # F. SAFETY INCIDENTS / SAFETY RISK / RECOMMENDED ACTIONS / AREA SAFETY
     elif intent in ["SAFETY_INCIDENTS", "SAFETY_RISK", "RECOMMENDED_ACTIONS", "AREA_SAFETY"]:
@@ -574,16 +591,33 @@ def retrieve_assistant_context(
         if inc_bullets:
             context_sections.append("SAFETY INCIDENTS DETAIL (SQL):\n" + "\n".join(inc_bullets))
         else:
-            context_sections.append("SAFETY INCIDENTS DETAIL (SQL):\n- No safety incidents recorded matching criteria.")
+            area_note = f" for {matched_area_names[0]}" if matched_area_names else ""
+            context_sections.append(f"SAFETY INCIDENTS DETAIL (SQL):\n- No safety incidents recorded{area_note} in this project.")
 
-        # Also load failed inspections if risk or actions
-        if intent in ["SAFETY_RISK", "RECOMMENDED_ACTIONS"]:
+        # If Area Safety, also load observations in that area
+        if intent == "AREA_SAFETY" and matched_area_ids:
+            area_obs = db.query(models.Observation).filter(
+                models.Observation.project_id == project_id,
+                models.Observation.area_id.in_(matched_area_ids)
+            ).order_by(models.Observation.id.desc()).limit(5).all()
+            if area_obs:
+                obs_lines = [f"- Observation #{o.id} [{o.priority}, Status: {o.status}]: {o.title} - {o.description}" for o in area_obs]
+                context_sections.append("AREA OBSERVATIONS (SQL):\n" + "\n".join(obs_lines))
+                for o in area_obs:
+                    add_source("OBSERVATION", str(o.id), f"Observation #{o.id}: {o.title}", f"{o.priority} · {o.status}")
+                    data_used.append("observations")
+
+        # Also load failed inspections if risk, actions, or area safety
+        if intent in ["SAFETY_RISK", "RECOMMENDED_ACTIONS", "AREA_SAFETY"]:
             insp_q = db.query(models.InspectionReport).filter(
                 models.InspectionReport.project_id == project_id,
                 models.InspectionReport.status == "FAILED"
-            ).order_by(models.InspectionReport.id.desc()).limit(5).all()
+            )
+            if matched_area_ids:
+                insp_q = insp_q.filter(models.InspectionReport.area_id.in_(matched_area_ids))
+            insp_records = insp_q.order_by(models.InspectionReport.id.desc()).limit(5).all()
             insp_bullets = []
-            for insp in insp_q:
+            for insp in insp_records:
                 area_n = insp.area.name if insp.area else "Overall"
                 insp_bullets.append(
                     f"- Failed Inspection #{insp.id} ({insp.inspection_type}) in {area_n}: Findings: {insp.findings or 'None'}. Recommendations: {insp.recommendations or 'None'}."

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   AnalysisResult,
   SitePhoto,
@@ -126,17 +125,10 @@ export default function PPEAnalysisModal({
   const violatingWorkers = people.filter((p) => !p.compliant);
 
   return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/70 backdrop-blur-xs overflow-y-auto">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="bg-white border border-[#E7E5E4] rounded-2xl max-w-5xl w-full shadow-2xl overflow-hidden my-6 flex flex-col max-h-[92vh]"
-        >
-          {/* 1. MODAL HEADER */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-[#E7E5E4] bg-white sticky top-0 z-10">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/70 backdrop-blur-xs overflow-y-auto">
+      <div className="bg-white border border-[#E7E5E4] rounded-2xl max-w-5xl w-full shadow-2xl overflow-hidden my-6 flex flex-col max-h-[92vh]">
+        {/* 1. MODAL HEADER */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E7E5E4] bg-white sticky top-0 z-10">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-[#F5B82E]/15 border border-[#F5B82E]/30 flex items-center justify-center text-[#D99A16]">
                 <HardHat className="w-5 h-5" />
@@ -279,13 +271,9 @@ export default function PPEAnalysisModal({
                     }
 
                     return (
-                      <motion.div
+                      <div
                         key={person.person_id}
-                        initial={{ opacity: 0, y: 15 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: idx * 0.08 }}
-                        whileHover={{ y: -3, transition: { duration: 0.15 } }}
-                        className={`bg-white border rounded-2xl p-4 shadow-xs space-y-4 flex flex-col justify-between transition-shadow hover:shadow-md ${
+                        className={`bg-white border rounded-2xl p-4 shadow-xs space-y-4 flex flex-col justify-between transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
                           isCompliant
                             ? "border-l-4 border-l-emerald-500 border-[#E7E5E4]"
                             : "border-l-4 border-l-rose-500 border-[#E7E5E4]"
@@ -310,104 +298,115 @@ export default function PPEAnalysisModal({
                             }`}
                           >
                             {isCompliant ? (
-                              <>
-                                <Check className="w-3 h-3 text-emerald-600" />
-                                <span>COMPLIANT</span>
-                              </>
+                              <Check className="w-3 h-3 text-emerald-600" />
                             ) : (
-                              <>
-                                <AlertTriangle className="w-3 h-3 text-rose-600" />
-                                <span>VIOLATION</span>
-                              </>
+                              <AlertTriangle className="w-3 h-3 text-rose-600" />
                             )}
+                            <span>{isCompliant ? "COMPLIANT" : "VIOLATION"}</span>
                           </span>
                         </div>
 
-                        {/* PPE Checklist */}
-                        <div className="space-y-2.5 text-xs py-1">
+                        {/* PPE Checklist Icons Grid */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
                           {/* Helmet */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2 text-slate-700 font-medium">
-                              <HardHat className="w-4 h-4 text-slate-500" />
-                              <span>Helmet</span>
+                          <div
+                            className={`p-2 rounded-xl border flex items-center justify-between ${
+                              person.helmet.detected
+                                ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
+                                : "bg-rose-50/60 border-rose-200 text-rose-900"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-1.5">
+                              <HardHat
+                                className={`w-3.5 h-3.5 ${
+                                  person.helmet.detected ? "text-emerald-600" : "text-rose-500"
+                                }`}
+                              />
+                              <span className="font-semibold text-[11px]">Helmet</span>
                             </div>
                             {person.helmet.detected ? (
-                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-extrabold rounded-md flex items-center space-x-1">
-                                <Check className="w-3 h-3 text-emerald-600" />
-                                <span>{Math.round((person.helmet.confidence || 0.9) * 100)}%</span>
-                              </span>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
                             ) : (
-                              <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-extrabold rounded-md flex items-center space-x-1">
-                                <X className="w-3 h-3 text-rose-600" />
-                                <span>Missing</span>
-                              </span>
+                              <X className="w-3.5 h-3.5 text-rose-600" />
                             )}
                           </div>
 
-                          {/* Safety Vest */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2 text-slate-700 font-medium">
-                              <Shirt className="w-4 h-4 text-slate-500" />
-                              <span>Safety Vest</span>
+                          {/* Vest */}
+                          <div
+                            className={`p-2 rounded-xl border flex items-center justify-between ${
+                              person.vest.detected
+                                ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
+                                : "bg-rose-50/60 border-rose-200 text-rose-900"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-1.5">
+                              <Shirt
+                                className={`w-3.5 h-3.5 ${
+                                  person.vest.detected ? "text-emerald-600" : "text-rose-500"
+                                }`}
+                              />
+                              <span className="font-semibold text-[11px]">Vest</span>
                             </div>
                             {person.vest.detected ? (
-                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-extrabold rounded-md flex items-center space-x-1">
-                                <Check className="w-3 h-3 text-emerald-600" />
-                                <span>{Math.round((person.vest.confidence || 0.9) * 100)}%</span>
-                              </span>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
                             ) : (
-                              <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-extrabold rounded-md flex items-center space-x-1">
-                                <X className="w-3 h-3 text-rose-600" />
-                                <span>Missing</span>
-                              </span>
+                              <X className="w-3.5 h-3.5 text-rose-600" />
                             )}
                           </div>
 
                           {/* Gloves */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2 text-slate-700 font-medium">
-                              <Hand className="w-4 h-4 text-slate-500" />
-                              <span>Gloves</span>
+                          <div
+                            className={`p-2 rounded-xl border flex items-center justify-between ${
+                              person.gloves.detected
+                                ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
+                                : "bg-rose-50/60 border-rose-200 text-rose-900"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-1.5">
+                              <Hand
+                                className={`w-3.5 h-3.5 ${
+                                  person.gloves.detected ? "text-emerald-600" : "text-rose-500"
+                                }`}
+                              />
+                              <span className="font-semibold text-[11px]">Gloves</span>
                             </div>
                             {person.gloves.detected ? (
-                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-extrabold rounded-md flex items-center space-x-1">
-                                <Check className="w-3 h-3 text-emerald-600" />
-                                <span>{Math.round((person.gloves.confidence || 0.9) * 100)}%</span>
-                              </span>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
                             ) : (
-                              <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-extrabold rounded-md flex items-center space-x-1">
-                                <X className="w-3 h-3 text-rose-600" />
-                                <span>Missing</span>
-                              </span>
+                              <X className="w-3.5 h-3.5 text-rose-600" />
                             )}
                           </div>
 
                           {/* Boots */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2 text-slate-700 font-medium">
-                              <Footprints className="w-4 h-4 text-slate-500" />
-                              <span>Safety Boots</span>
+                          <div
+                            className={`p-2 rounded-xl border flex items-center justify-between ${
+                              person.boots.detected
+                                ? "bg-emerald-50/60 border-emerald-200 text-emerald-900"
+                                : "bg-rose-50/60 border-rose-200 text-rose-900"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-1.5">
+                              <Footprints
+                                className={`w-3.5 h-3.5 ${
+                                  person.boots.detected ? "text-emerald-600" : "text-rose-500"
+                                }`}
+                              />
+                              <span className="font-semibold text-[11px]">Boots</span>
                             </div>
                             {person.boots.detected ? (
-                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-extrabold rounded-md flex items-center space-x-1">
-                                <Check className="w-3 h-3 text-emerald-600" />
-                                <span>{Math.round((person.boots.confidence || 0.9) * 100)}%</span>
-                              </span>
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
                             ) : (
-                              <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-extrabold rounded-md flex items-center space-x-1">
-                                <X className="w-3 h-3 text-rose-600" />
-                                <span>Missing</span>
-                              </span>
+                              <X className="w-3.5 h-3.5 text-rose-600" />
                             )}
                           </div>
                         </div>
 
-                        {/* Card Bottom Compliance Banner */}
+                        {/* Person Card Footer Summary */}
                         <div
-                          className={`p-2.5 rounded-xl border flex items-center space-x-2 text-xs font-semibold ${
+                          className={`p-2.5 rounded-xl border text-xs flex items-center space-x-2 ${
                             isCompliant
-                              ? "bg-emerald-50/70 text-emerald-900 border-emerald-200/80"
-                              : "bg-rose-50/70 text-rose-900 border-rose-200/80"
+                              ? "bg-emerald-50/40 border-emerald-200 text-emerald-900"
+                              : "bg-rose-50/40 border-rose-200 text-rose-900"
                           }`}
                         >
                           {isCompliant ? (
@@ -420,7 +419,7 @@ export default function PPEAnalysisModal({
                             <span className="text-[10px] text-slate-500 block">{summarySubtext}</span>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     );
                   })}
                 </div>
@@ -493,11 +492,9 @@ export default function PPEAnalysisModal({
                     </span>
                     {/* Animated Progress Bar */}
                     <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${summary.overall_compliance}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className={`h-full rounded-full ${
+                      <div
+                        style={{ width: `${summary.overall_compliance}%` }}
+                        className={`h-full rounded-full transition-all duration-500 ease-out ${
                           summary.overall_compliance >= 80
                             ? "bg-emerald-500"
                             : summary.overall_compliance >= 50
@@ -568,8 +565,7 @@ export default function PPEAnalysisModal({
               <span>Generate Full Report</span>
             </button>
           </div>
-        </motion.div>
+        </div>
       </div>
-    </AnimatePresence>
   );
 }

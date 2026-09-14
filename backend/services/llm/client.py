@@ -396,6 +396,22 @@ User Question: {query}"""
             output.append("- Perform targeted safety inspections in flagged high-risk zones.")
             output.append("- Review active site observations with trade supervisors.")
 
+        elif intent == "AREA_SAFETY":
+            output.append(f"### 📍 Area Safety & Hazard Assessment: {project_name}")
+            area_lines = [l for l in lines if "AREA SAFETY" in l or "AREA HAZARD" in l or "LOCATION:" in l]
+            if area_lines:
+                for al in area_lines:
+                    output.append(f"- {al}")
+            elif incident_details:
+                output.append("**Area Incidents & Observations:**")
+                for inc in incident_details:
+                    output.append(f"- {inc}")
+            elif semantic_evidence:
+                for e in semantic_evidence[:4]:
+                    output.append(f"- {e}")
+            else:
+                output.append("No active safety issues or incidents recorded for this area.")
+
         elif intent == "SAFETY_INCIDENTS":
             output.append(f"### 🚨 Safety Incidents Overview: {project_name}")
             if incident_details:

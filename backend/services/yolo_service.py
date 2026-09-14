@@ -5,6 +5,8 @@ import logging
 from typing import List, Dict, Any, Tuple, Optional
 from PIL import Image, ImageDraw, ImageFont
 
+from datetime import datetime
+
 logger = logging.getLogger(__name__)
 
 # Defaults
@@ -41,6 +43,7 @@ class YOLOService:
         self.device = os.getenv("PPE_DEVICE", "auto")
         self.model_name = "construction-ppe-yolo"
         self.model_version = "v1"
+        self.loaded_at = datetime.utcnow()
         self._load_model()
 
     @classmethod
@@ -48,6 +51,16 @@ class YOLOService:
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
+
+    def get_model_info(self) -> Dict[str, Any]:
+        return {
+            "model_name": self.model_name,
+            "model_version": self.model_version,
+            "model_path": getattr(self, "loaded_path", self.model_path),
+            "device": self._resolve_device(),
+            "confidence_threshold": self.confidence_threshold,
+            "loaded_at": self.loaded_at.isoformat() if hasattr(self, "loaded_at") else datetime.utcnow().isoformat()
+        }
 
     def _resolve_device(self) -> str:
         if self.device == "auto":
@@ -61,7 +74,14 @@ class YOLOService:
         return self.device
 
     def _load_model(self):
-        from ultralytics import YOLO
+        try:
+            from ultralytics import YOLO
+        except ImportError:
+            import sys
+            venv_site_packages = os.path.join(os.path.dirname(os.path.dirname(__file__)), "venv", "Lib", "site-packages")
+            if os.path.exists(venv_site_packages) and venv_site_packages not in sys.path:
+                sys.path.insert(0, venv_site_packages)
+            from ultralytics import YOLO
 
         target_path = self.model_path
         if not os.path.exists(target_path):

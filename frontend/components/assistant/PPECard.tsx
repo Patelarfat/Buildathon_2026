@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -111,7 +110,7 @@ function PhotoCardItem({
         <button
           type="button"
           onClick={() => toggleExpand(photo.photo_id)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors shrink-0 self-end sm:self-center"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors shrink-0 self-end sm:self-center cursor-pointer"
         >
           <span>{isExpanded ? "Hide Details" : "View Details"}</span>
           {isExpanded ? (
@@ -132,15 +131,8 @@ function PhotoCardItem({
       )}
 
       {/* Collapsible Person Details */}
-      <AnimatePresence>
-        {isExpanded && photo.people && photo.people.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="p-3.5 bg-slate-50 border-t border-slate-200 space-y-3"
-          >
+      {isExpanded && photo.people && photo.people.length > 0 && (
+        <div className="p-3.5 bg-slate-50 border-t border-slate-200 space-y-3 transition-all duration-200">
             <h6 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
               WORKER PPE COMPLIANCE ({photo.people.length} WORKERS)
             </h6>
@@ -251,9 +243,8 @@ function PhotoCardItem({
                 );
               })}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
@@ -312,11 +303,8 @@ export default function PPECard({ ppe, className = "" }: PPECardProps) {
   const maxTypeCount = Math.max(...typeBreakdown.map((t) => t.count), 1);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={`rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden space-y-5 p-5 ${className}`}
+    <div
+      className={`rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden space-y-5 p-5 transition-all duration-200 ${className}`}
     >
       {/* 1. HEADER */}
       <div className="flex flex-wrap items-start justify-between gap-3 pb-4 border-b border-slate-100">
@@ -441,11 +429,9 @@ export default function PPECard({ ppe, className = "" }: PPECardProps) {
           <span className="font-bold text-slate-900 font-mono">{compliancePct}%</span>
         </div>
         <div className="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${compliancePct}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className={`h-full rounded-full ${
+          <div
+            style={{ width: `${compliancePct}%` }}
+            className={`h-full rounded-full transition-all duration-500 ease-out ${
               compliancePct >= 80
                 ? "bg-emerald-500"
                 : compliancePct >= 50
@@ -488,11 +474,9 @@ export default function PPECard({ ppe, className = "" }: PPECardProps) {
                     </span>
                   </div>
                   <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${barPct}%` }}
-                      transition={{ duration: 0.6, delay: idx * 0.1 }}
-                      className="h-full bg-rose-500 rounded-full"
+                    <div
+                      style={{ width: `${barPct}%` }}
+                      className="h-full bg-rose-500 rounded-full transition-all duration-500 ease-out"
                     />
                   </div>
                 </div>
@@ -518,7 +502,7 @@ export default function PPECard({ ppe, className = "" }: PPECardProps) {
               <button
                 type="button"
                 onClick={() => setFilterTab("ALL")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   filterTab === "ALL"
                     ? "bg-white text-slate-900 shadow-2xs"
                     : "text-slate-600 hover:text-slate-900"
@@ -529,7 +513,7 @@ export default function PPECard({ ppe, className = "" }: PPECardProps) {
               <button
                 type="button"
                 onClick={() => setFilterTab("VIOLATIONS")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   filterTab === "VIOLATIONS"
                     ? "bg-white text-rose-700 shadow-2xs"
                     : "text-slate-600 hover:text-slate-900"
@@ -540,7 +524,7 @@ export default function PPECard({ ppe, className = "" }: PPECardProps) {
               <button
                 type="button"
                 onClick={() => setFilterTab("COMPLIANT")}
-                className={`px-2.5 py-1 rounded-lg font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                   filterTab === "COMPLIANT"
                     ? "bg-white text-emerald-700 shadow-2xs"
                     : "text-slate-600 hover:text-slate-900"
@@ -576,6 +560,6 @@ export default function PPECard({ ppe, className = "" }: PPECardProps) {
           </p>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
