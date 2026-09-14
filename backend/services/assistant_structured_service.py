@@ -142,11 +142,15 @@ def build_structured_assistant_response(
         prog_sources = []
         if latest:
             progress_info = schemas.AssistantProgressInfo(
+                report_type="DAILY",
+                reporting_period=latest.report_date,
                 progress_pct=latest.progress_percentage,
                 workers_count=latest.workers_count,
                 work_completed=latest.work_completed or "Ongoing site activities logged.",
+                work_planned=latest.work_planned,
                 weather=latest.weather or "Clear",
-                blockers=latest.blockers or (latest.issues if latest.issues else "None")
+                blockers=latest.blockers if (latest.blockers and latest.blockers.lower() != "none") else None,
+                days_logged=1
             )
             prog_sources.append(
                 schemas.AssistantSource(
@@ -192,16 +196,44 @@ def build_structured_assistant_response(
         if daily_reports:
             work_summaries = [r.work_completed for r in daily_reports if r.work_completed]
             combined_work = " | ".join(work_summaries[:3]) if work_summaries else "Weekly construction milestones progressing."
-            avg_progress = round(sum((r.progress_percentage or 0) for r in daily_reports) / len(daily_reports)) if daily_reports else 0
             max_progress = max(((r.progress_percentage or 0) for r in daily_reports), default=0)
-            workers_latest = latest.workers_count if latest else 0
+            workers_latest = max(((r.workers_count or 0) for r in daily_reports), default=(latest.workers_count if latest else 0))
+            planned_summaries = [r.work_planned for r in daily_reports if r.work_planned]
+            combined_planned = " | ".join(planned_summaries[:2]) if planned_summaries else None
+            
+            period_str = f"{daily_reports[-1].report_date} to {daily_reports[0].report_date}" if len(daily_reports) > 1 else daily_reports[0].report_date
+
+            activities_list = []
+            for r in daily_reports:
+                if r.work_completed:
+                    loc = f"{r.site.name if r.site else 'Site'}{(' - ' + r.area.name) if r.area else ''}"
+                    activities_list.append(f"{r.report_date} ({loc}): {r.work_completed}")
+
+            blockers_list = [r.blockers for r in daily_reports if r.blockers and r.blockers.lower() != "none"]
+            combined_blockers = " | ".join(blockers_list) if blockers_list else None
+
+            # Safety status
+            open_inc_count = len(incidents)
+            safety_stat = f"{open_inc_count} open safety incident(s) flagged" if open_inc_count > 0 else "Zero open safety incidents recorded"
+
+            # Materials status
+            mat_summary = None
+            if materials:
+                mat_summary = ", ".join([f"{m.material_name} ({m.quantity} {m.unit}, {m.status})" for m in materials[:3]])
 
             progress_info = schemas.AssistantProgressInfo(
+                report_type="WEEKLY",
+                reporting_period=period_str,
                 progress_pct=max_progress,
                 workers_count=workers_latest,
                 work_completed=combined_work,
+                work_planned=combined_planned,
                 weather=latest.weather if latest else "Clear",
-                blockers=latest.blockers if (latest and latest.blockers and latest.blockers.lower() != "none") else None
+                blockers=combined_blockers,
+                activities=activities_list,
+                safety_summary=safety_stat,
+                materials_summary=mat_summary,
+                days_logged=len(daily_reports)
             )
 
             for r in daily_reports[:4]:
@@ -215,9 +247,11 @@ def build_structured_assistant_response(
                 )
 
             summary = (
-                f"Weekly Progress Summary for {project_name}: {len(daily_reports)} daily log(s) reviewed for the period. "
-                f"Current milestone progress is at {max_progress}%. "
-                f"Key completed work: {combined_work[:180]}..."
+                f"Weekly Site Progress Report for {project_name} (Period: {period_str}): "
+                f"{len(daily_reports)} daily log(s) consolidated. "
+                f"Overall milestone progress is at {max_progress}%. "
+                f"Peak workforce: {workers_latest} workers on site. "
+                f"Summary of work: {combined_work[:200]}..."
             )
         else:
             summary = f"No weekly progress logs or daily reports recorded in the stored data for {project_name}."

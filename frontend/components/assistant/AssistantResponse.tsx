@@ -12,6 +12,7 @@ import LocationCard from "./LocationCard";
 import MaterialCard from "./MaterialCard";
 import PPECard from "./PPECard";
 import ProgressCard from "./ProgressCard";
+import WeeklyProgressCard from "./WeeklyProgressCard";
 import EvidenceSources from "./EvidenceSources";
 import DecisionExplanation from "./DecisionExplanation";
 import {
@@ -41,9 +42,11 @@ export default function AssistantResponse({
   // If structured data is available directly from the backend, render it directly!
   if (structured) {
     const qType = (structured.query_type || "GENERAL").toUpperCase();
+    const isWeeklyReport = qType === "WEEKLY_PROGRESS_REPORT" || qType === "WEEKLY_PROGRESS";
+    const isDailyReport = qType === "DAILY_REPORT" || qType === "DAILY";
+    const isProgressQuery = isWeeklyReport || isDailyReport || qType === "PROGRESS";
     const isMaterialQuery = qType === "MATERIALS" || qType === "MATERIAL";
     const isPPEQuery = qType === "PPE";
-    const isProgressQuery = qType === "PROGRESS" || qType === "DAILY_REPORT" || qType === "WEEKLY_PROGRESS_REPORT";
     const isAreaQuery = qType === "AREA" || qType === "AREA_SAFETY";
     const isRiskQuery = qType === "RISK" || qType === "SAFETY_RISK";
     const isActionsQuery = qType === "RECOMMENDED_ACTIONS";
@@ -55,6 +58,18 @@ export default function AssistantResponse({
 
     const isGreetingOrOutOfScope = qType === "GREETING" || qType === "OUT_OF_SCOPE";
 
+    const getSummaryBannerTitle = () => {
+      if (isWeeklyReport) return "Weekly Site Progress Report";
+      if (isDailyReport) return "Daily Site Operations Report";
+      if (isRiskQuery) return "Project Risk Assessment";
+      if (isSafetyQuery) return "Safety Issues & Hazard Analysis";
+      if (isMaterialQuery) return "Material & Inventory Status";
+      if (isPPEQuery) return "AI PPE Compliance Scan";
+      if (isAreaQuery) return "Area Safety & Hazard Assessment";
+      if (isGreetingOrOutOfScope) return "Construction AI Assistant";
+      return "Executive Situational Assessment";
+    };
+
     return (
       <div className={`space-y-3.5 text-slate-800 ${className}`}>
         {/* 1. EXECUTIVE SUMMARY (Direct Situational Summary) */}
@@ -62,7 +77,7 @@ export default function AssistantResponse({
           <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-2xs space-y-1">
             <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase text-[#D99A16] tracking-wider">
               <Sparkles className="w-3 h-3" />
-              <span>{isGreetingOrOutOfScope ? "Construction AI Assistant" : "Executive Situational Assessment"}</span>
+              <span>{getSummaryBannerTitle()}</span>
             </div>
             <p className="text-xs sm:text-sm leading-relaxed text-slate-800 font-normal whitespace-pre-line">
               {structured.executive_summary}
@@ -82,9 +97,19 @@ export default function AssistantResponse({
           <MaterialCard materials={structured.materials} />
         )}
 
-        {/* C. PROGRESS & WORKFORCE (For Progress Queries) */}
-        {isProgressQuery && structured.progress && (
+        {/* C. PROGRESS & WORKFORCE (For Progress Queries: Weekly vs Daily) */}
+        {isWeeklyReport && structured.progress && (
+          <WeeklyProgressCard progress={structured.progress} />
+        )}
+        {isDailyReport && structured.progress && (
           <ProgressCard progress={structured.progress} />
+        )}
+        {!isWeeklyReport && !isDailyReport && isProgressQuery && structured.progress && (
+          structured.progress.report_type === "WEEKLY" ? (
+            <WeeklyProgressCard progress={structured.progress} />
+          ) : (
+            <ProgressCard progress={structured.progress} />
+          )
         )}
 
         {/* D. AUTHORITATIVE RISK STATUS GAUGE (For Risk Queries or General Overview) */}

@@ -1242,11 +1242,19 @@ class AssistantMaterialItem(BaseModel):
 
 
 class AssistantProgressInfo(BaseModel):
+    report_type: str = "DAILY"
+    reporting_period: Optional[str] = None
     progress_pct: Optional[int] = None
+    planned_pct: Optional[int] = None
     workers_count: Optional[int] = None
     work_completed: Optional[str] = None
+    work_planned: Optional[str] = None
     weather: Optional[str] = None
     blockers: Optional[str] = None
+    activities: List[str] = []
+    safety_summary: Optional[str] = None
+    materials_summary: Optional[str] = None
+    days_logged: Optional[int] = None
 
 
 class AssistantPPEPhotoItem(BaseModel):

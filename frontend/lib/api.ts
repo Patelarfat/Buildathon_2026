@@ -1141,11 +1141,19 @@ export interface AssistantMaterialItem {
 }
 
 export interface AssistantProgressInfo {
+  report_type?: "DAILY" | "WEEKLY" | string | null;
+  reporting_period?: string | null;
   progress_pct?: number | null;
+  planned_pct?: number | null;
   workers_count?: number | null;
   work_completed?: string | null;
+  work_planned?: string | null;
   weather?: string | null;
   blockers?: string | null;
+  activities?: string[] | null;
+  safety_summary?: string | null;
+  materials_summary?: string | null;
+  days_logged?: number | null;
 }
 
 export interface AssistantPPEPhotoItem {
