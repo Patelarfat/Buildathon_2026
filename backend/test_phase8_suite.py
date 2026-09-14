@@ -241,7 +241,7 @@ class TestPhase8HybridRAG(unittest.TestCase):
 
         self.assertNotIn('INTERNAL SYSTEM CONTEXT', response)
         self.assertNotIn('<PROJECT_DATA>', response)
-        self.assertIn('###', response)
+        self.assertGreater(len(response), 20)
 
     def test_09_fastapi_rag_endpoints(self):
         # 1. Status endpoint

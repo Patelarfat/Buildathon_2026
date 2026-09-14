@@ -1,0 +1,493 @@
+{
+  "project_name": "Pune Metro Commercial Hub \u2013 Phase 1",
+  "project_id": 286,
+  "total": 17,
+  "passed": 17,
+  "pass_rate": 100.0,
+  "results": [
+    {
+      "id": 1,
+      "group": "Original 8.E Failure",
+      "query": "Is anything preventing work from moving forward?",
+      "target": "blocker",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "DAILY_REPORT",
+      "expanded_queries": [
+        "Is anything preventing work from moving forward?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected"
+      ],
+      "semantic_concepts": [
+        "delayed_materials",
+        "delays",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "The following issues are currently affecting construction progress at **Pune Metro Commercial Hub \u2013 Phase 1**: - Daily f"
+    },
+    {
+      "id": 2,
+      "group": "Original 8.E Failure",
+      "query": "What's the biggest operational concern right now?",
+      "target": "concern",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "GENERAL_PROJECT",
+      "expanded_queries": [
+        "What's the biggest operational concern right now?",
+        "top operational concerns active site blockers open safety incidents",
+        "delayed materials failed safety inspections supervisor observations"
+      ],
+      "semantic_concepts": [
+        "critical_blockers",
+        "failed_inspections",
+        "open_incidents",
+        "operational_concerns"
+      ],
+      "matched_areas": [],
+      "sources_count": 4,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "A high-priority safety concern is logged regarding Safety Incident #273: FALL_HAZARD."
+    },
+    {
+      "id": 3,
+      "group": "Original 8.E Failure",
+      "query": "What happened recently in the office tower?",
+      "target": "office_tower",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "DAILY_REPORT",
+      "expanded_queries": [
+        "What happened recently in the office tower?",
+        "Office Tower \u2013 Level 8 activities incidents progress inspections observations",
+        "Office Tower \u2013 Level 8 daily reports materials safety",
+        "Office Tower \u2013 Level 8 ppe detection camera findings helmet vest"
+      ],
+      "semantic_concepts": [
+        "ai_findings",
+        "area_office_tower_\u2013_level_8",
+        "daily_progress",
+        "helmet_vest_violations",
+        "milestone_velocity",
+        "ppe_compliance",
+        "work_packages_completed",
+        "workforce_count"
+      ],
+      "matched_areas": [
+        "Office Tower \u2013 Level 8"
+      ],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "Recent recorded site events for the specified area: - AREA: Office Tower \u2013 Level 8 - AI Vision Finding #627: PPE Violati"
+    },
+    {
+      "id": 4,
+      "group": "Original 8.E Failure",
+      "query": "Are there any resources causing problems?",
+      "target": "material",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "MATERIALS",
+      "expanded_queries": [
+        "Are there any resources causing problems?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected",
+        "materials delayed out of stock low stock supplies inventory"
+      ],
+      "semantic_concepts": [
+        "delayed_materials",
+        "delayed_supplies",
+        "delays",
+        "inventory_shortage",
+        "low_stock",
+        "materials",
+        "procurement_status",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 3,
+      "summary_preview": "The project currently has the following material constraints affecting construction operations: - **Aluminium Facade Fra"
+    },
+    {
+      "id": 5,
+      "group": "Original 8.E Failure",
+      "query": "Why is the overall site risk flagged at its current rating?",
+      "target": "risk",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "SAFETY_RISK",
+      "expanded_queries": [
+        "Why is the overall site risk flagged at its current rating?",
+        "site risk evaluation safety factors incidents failed audits"
+      ],
+      "semantic_concepts": [
+        "contributing_factors",
+        "risk_rating",
+        "risk_score",
+        "safety_risk"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": true,
+      "materials_count": 0,
+      "summary_preview": "The authoritative site risk rating for **Pune Metro Commercial Hub \u2013 Phase 1** is **70/100 (HIGH)**. **Primary Contribut"
+    },
+    {
+      "id": 6,
+      "group": "New Unseen",
+      "query": "What's holding construction up?",
+      "target": "blocker",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "DAILY_REPORT",
+      "expanded_queries": [
+        "What's holding construction up?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected"
+      ],
+      "semantic_concepts": [
+        "delayed_materials",
+        "delays",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "The following issues are currently affecting construction progress at **Pune Metro Commercial Hub \u2013 Phase 1**: - Daily f"
+    },
+    {
+      "id": 7,
+      "group": "New Unseen",
+      "query": "Are supplies creating any bottlenecks?",
+      "target": "material",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "MATERIALS",
+      "expanded_queries": [
+        "Are supplies creating any bottlenecks?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected",
+        "materials delayed out of stock low stock supplies inventory"
+      ],
+      "semantic_concepts": [
+        "delayed_materials",
+        "delayed_supplies",
+        "delays",
+        "inventory_shortage",
+        "low_stock",
+        "materials",
+        "procurement_status",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 4,
+      "summary_preview": "The project currently has the following material constraints affecting construction operations: - **Aluminium Facade Fra"
+    },
+    {
+      "id": 8,
+      "group": "New Unseen",
+      "query": "Where is the site struggling most?",
+      "target": "concern",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "DAILY_REPORT",
+      "expanded_queries": [
+        "Where is the site struggling most?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected",
+        "top operational concerns active site blockers open safety incidents"
+      ],
+      "semantic_concepts": [
+        "critical_blockers",
+        "delayed_materials",
+        "delays",
+        "failed_inspections",
+        "open_incidents",
+        "operational_concerns",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "A high-priority safety concern is logged regarding Safety Incident #273: FALL_HAZARD. Material supply constraints are ac"
+    },
+    {
+      "id": 9,
+      "group": "New Unseen",
+      "query": "What is currently getting in the way of progress?",
+      "target": "blocker",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "DAILY_REPORT",
+      "expanded_queries": [
+        "What is currently getting in the way of progress?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected",
+        "daily report work completed planned progress percentage"
+      ],
+      "semantic_concepts": [
+        "daily_progress",
+        "delayed_materials",
+        "delays",
+        "milestone_velocity",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction",
+        "work_packages_completed",
+        "workforce_count"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "The following issues are currently affecting construction progress at **Pune Metro Commercial Hub \u2013 Phase 1**: - Daily f"
+    },
+    {
+      "id": 10,
+      "group": "New Unseen",
+      "query": "Anything serious affecting operations?",
+      "target": "concern",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "DAILY_REPORT",
+      "expanded_queries": [
+        "Anything serious affecting operations?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected",
+        "top operational concerns active site blockers open safety incidents"
+      ],
+      "semantic_concepts": [
+        "critical_blockers",
+        "delayed_materials",
+        "delays",
+        "failed_inspections",
+        "open_incidents",
+        "operational_concerns",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "A high-priority safety concern is logged regarding Safety Incident #270: EQUIPMENT_ACCIDENT. Material supply constraints"
+    },
+    {
+      "id": 11,
+      "group": "New Unseen",
+      "query": "What's going on lately in the tower?",
+      "target": "office_tower",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "GENERAL_PROJECT",
+      "expanded_queries": [
+        "What's going on lately in the tower?"
+      ],
+      "semantic_concepts": [],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "Material status: Aluminium Facade Frames (DELAYED)."
+    },
+    {
+      "id": 12,
+      "group": "New Unseen",
+      "query": "Which resources might affect upcoming work?",
+      "target": "material",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "MATERIALS",
+      "expanded_queries": [
+        "Which resources might affect upcoming work?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected",
+        "materials delayed out of stock low stock supplies inventory"
+      ],
+      "semantic_concepts": [
+        "delayed_materials",
+        "delayed_supplies",
+        "delays",
+        "inventory_shortage",
+        "low_stock",
+        "materials",
+        "procurement_status",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 2,
+      "summary_preview": "The project currently has the following material constraints affecting construction operations: - **Aluminium Facade Fra"
+    },
+    {
+      "id": 13,
+      "group": "New Unseen",
+      "query": "How serious are the current site conditions?",
+      "target": "risk",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "SAFETY_RISK",
+      "expanded_queries": [
+        "How serious are the current site conditions?",
+        "top operational concerns active site blockers open safety incidents",
+        "delayed materials failed safety inspections supervisor observations",
+        "site risk evaluation safety factors incidents failed audits"
+      ],
+      "semantic_concepts": [
+        "contributing_factors",
+        "critical_blockers",
+        "failed_inspections",
+        "open_incidents",
+        "operational_concerns",
+        "risk_rating",
+        "risk_score",
+        "safety_risk"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": true,
+      "materials_count": 0,
+      "summary_preview": "A high-priority safety concern is logged regarding Safety Incident #272: SLIP_TRIP. Material supply constraints are acti"
+    },
+    {
+      "id": 14,
+      "group": "New Unseen",
+      "query": "What is the current safety assessment?",
+      "target": "risk",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "SAFETY_RISK",
+      "expanded_queries": [
+        "What is the current safety assessment?",
+        "material inventory Safety Barricade Panels status delivery delayed",
+        "site risk evaluation safety factors incidents failed audits"
+      ],
+      "semantic_concepts": [
+        "contributing_factors",
+        "delayed_supplies",
+        "inventory_shortage",
+        "low_stock",
+        "materials",
+        "procurement_status",
+        "risk_rating",
+        "risk_score",
+        "safety_risk"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": true,
+      "materials_count": 0,
+      "summary_preview": "The authoritative site risk rating for **Pune Metro Commercial Hub \u2013 Phase 1** is **70/100 (HIGH)**. **Primary Contribut"
+    },
+    {
+      "id": 15,
+      "group": "New Unseen",
+      "query": "Where are the biggest constraints right now?",
+      "target": "blocker",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "DAILY_REPORT",
+      "expanded_queries": [
+        "Where are the biggest constraints right now?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected"
+      ],
+      "semantic_concepts": [
+        "delayed_materials",
+        "delays",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "The following issues are currently affecting construction progress at **Pune Metro Commercial Hub \u2013 Phase 1**: - Daily f"
+    },
+    {
+      "id": 16,
+      "group": "New Unseen",
+      "query": "Any impediments to ongoing trades?",
+      "target": "blocker",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "DAILY_REPORT",
+      "expanded_queries": [
+        "Any impediments to ongoing trades?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected"
+      ],
+      "semantic_concepts": [
+        "delayed_materials",
+        "delays",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 0,
+      "summary_preview": "The following issues are currently affecting construction progress at **Pune Metro Commercial Hub \u2013 Phase 1**: - Daily f"
+    },
+    {
+      "id": 17,
+      "group": "New Unseen",
+      "query": "Is procurement falling behind on anything?",
+      "target": "material",
+      "status": "PASS",
+      "fail_reasons": [],
+      "primary_topic": "MATERIALS",
+      "expanded_queries": [
+        "Is procurement falling behind on anything?",
+        "site blockers delays pending materials",
+        "work stoppage delayed activity facade installation affected",
+        "materials delayed out of stock low stock supplies inventory"
+      ],
+      "semantic_concepts": [
+        "delayed_materials",
+        "delayed_supplies",
+        "delays",
+        "inventory_shortage",
+        "low_stock",
+        "materials",
+        "procurement_status",
+        "progress_impact",
+        "site_blockers",
+        "work_obstruction"
+      ],
+      "matched_areas": [],
+      "sources_count": 6,
+      "has_risk_card": false,
+      "materials_count": 3,
+      "summary_preview": "The project currently has the following material constraints affecting construction operations: - **Aluminium Facade Fra"
+    }
+  ]
+}

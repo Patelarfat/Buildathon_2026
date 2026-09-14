@@ -35,7 +35,6 @@ class RAGIndexer:
         """
         # Generate embedding vector
         embedding_vec = EmbeddingService.get_embedding(content)
-        embedding_json = json.dumps(embedding_vec)
         meta_json = json.dumps(metadata or {})
 
         existing = (
@@ -52,7 +51,7 @@ class RAGIndexer:
             existing.title = title
             existing.content = content
             existing.metadata_json = meta_json
-            existing.embedding = embedding_json
+            existing.embedding = embedding_vec
             existing.site_id = site_id
             existing.area_id = area_id
             existing.updated_at = datetime.utcnow()
@@ -67,7 +66,7 @@ class RAGIndexer:
                 title=title,
                 content=content,
                 metadata_json=meta_json,
-                embedding=embedding_json,
+                embedding=embedding_vec,
                 created_at=datetime.utcnow(),
                 updated_at=datetime.utcnow(),
             )

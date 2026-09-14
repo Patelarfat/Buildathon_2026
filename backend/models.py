@@ -10,6 +10,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
+from pgvector.sqlalchemy import Vector
 from database import Base
 
 
@@ -475,7 +476,7 @@ class RAGDocument(Base):
     title = Column(String(255), nullable=True)
     content = Column(Text, nullable=False)
     metadata_json = Column(Text, nullable=True)
-    embedding = Column(Text, nullable=True)
+    embedding = Column(Vector(768), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

@@ -1,0 +1,883 @@
+{
+  "project_name": "Pune Metro Commercial Hub \u2013 Phase 1",
+  "project_id": 286,
+  "total_questions": 28,
+  "passed": 24,
+  "pass_rate": 85.7,
+  "results": [
+    {
+      "id": 1,
+      "category": "Delays / Blockers",
+      "question": "Is anything preventing work from moving forward?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "anything",
+        "preventing",
+        "work",
+        "from",
+        "moving",
+        "forward"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [DAILY_REPORT #83] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INCIDENT #273] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "FAIL",
+      "failures": [
+        {
+          "layer": "RETRIEVAL",
+          "reason": "Did not retrieve or mention site blockers/delays."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "category": "Delays / Blockers",
+      "question": "Are there any signs that progress could be affected?",
+      "intent": "DAILY_REPORT",
+      "entities": [
+        "signs",
+        "progress",
+        "could",
+        "affected"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports"
+      ],
+      "sources_count": 6,
+      "summary": "- Report Date: 2026-09-12\n- Workforce: 34 workers on site\n- Progress: 55%\n- Work Completed: Only 55% of planned work completed\n- Work Planned: Facade frame installation\n- Site Blockers: Aluminium facade frames pending.\n- Weather: Rain",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 3,
+      "category": "Delays / Blockers",
+      "question": "What's the biggest operational concern right now?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "biggest",
+        "operational",
+        "concern",
+        "right",
+        "now"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [INCIDENT #273] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INSPECTION #118] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "FAIL",
+      "failures": [
+        {
+          "layer": "RETRIEVAL",
+          "reason": "Did not retrieve or mention site blockers/delays."
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "category": "Areas / Locations",
+      "question": "Which part of the site needs immediate attention?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "part",
+        "site",
+        "needs",
+        "immediate",
+        "attention"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [INCIDENT #273] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INCIDENT #270] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 5,
+      "category": "Areas / Locations",
+      "question": "What happened recently in the office tower?",
+      "intent": "DAILY_REPORT",
+      "entities": [
+        "happened",
+        "recently",
+        "office",
+        "tower",
+        "level"
+      ],
+      "matched_materials": [],
+      "matched_areas": [
+        "Office Tower \u2013 Level 8"
+      ],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports",
+        "ppe_vision"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [AI_FINDING #627] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": true,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "FAIL",
+      "failures": [
+        {
+          "layer": "RETRIEVAL",
+          "reason": "Failed to scope retrieval to Office Tower zone."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "category": "Areas / Locations",
+      "question": "Which areas appear to have recurring problems?",
+      "intent": "PPE",
+      "entities": [
+        "areas",
+        "appear",
+        "have",
+        "recurring",
+        "problems"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports",
+        "ppe_vision",
+        "safety_incidents"
+      ],
+      "sources_count": 6,
+      "summary": "- AREA: Office Tower \u2013 Level 8\n- HIERARCHY: Pune Metro Commercial Hub \u2013 Phase 1 \u2192 Pune Metro Commercial Hub \u2013 Main Site \u2192 Office Tower \u2013 Level 8\n- Material Tracking #100: Aluminium Facade Frames. Category: FACADE. Inventory: 35.0 SETS. Status: DELAYED. Stored at Pune Metro Commercial Hub \u2013 Main Site in Office Tower \u2013 Level 8. Supplier: ABC Facades Pvt Ltd Notes: Delivery delayed and currently affecting facade installation.",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 7,
+      "category": "Areas / Locations",
+      "question": "What is the status of the podium level?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "status",
+        "podium",
+        "level"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- AREA: Podium Level 1\n- HIERARCHY: Pune Metro Commercial Hub \u2013 Phase 1 \u2192 Pune Metro Commercial Hub \u2013 Main Site \u2192 Podium Level 1\n- Material Tracking #102: Ceramic Floor Tiles. Category: FINISHING. Inventory: 450.0 BOXES. Status: LOW_STOCK. Stored at Pune Metro Commercial Hub \u2013 Main Site in Podium Level 1. Supplier: Kajaria Notes: Reserve stock running low.",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 8,
+      "category": "Materials",
+      "question": "Are there any resources causing problems?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "resources",
+        "causing",
+        "problems"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports",
+        "materials",
+        "safety_incidents"
+      ],
+      "sources_count": 6,
+      "summary": "**Identified Supply Blockers & Delays:**\n- Material : Aluminium Facade Frames (Status: DELAYED, Qty: 35.0 SETS, Supplier: ABC Facades Pvt Ltd, Notes: Delivery delayed and currently affecting facade installation.)\n- Material : Ceramic Floor Tiles (Status: LOW_STOCK, Qty: 450.0 BOXES, Supplier: Kajaria, Notes: Reserve stock running low.)\n- Material : Safety Barricade Panels (Status: LOW_STOCK, Qty: 12.0 UNITS, Supplier: Site Safety Supplier, Notes: Additional units ordered for perimeter.)\n- Material : Fire-Rated Electrical Cable (Status: OUT_OF_STOCK, Qty: 0.0 METERS, Supplier: Electrical Supplier, Notes: Current stock unavailable and MEP installation may be affected.)\n\n- Follow up with vendors and procurement leads regarding pending material shipments.\n- Coordinate staging area logistics to prevent milestone installation delays.",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 9,
+      "category": "Materials",
+      "question": "Is there anything the procurement team should know?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "anything",
+        "procurement",
+        "team",
+        "should",
+        "know"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "materials"
+      ],
+      "sources_count": 6,
+      "summary": "**Identified Supply Blockers & Delays:**\n- Material : Aluminium Facade Frames (Status: DELAYED, Qty: 35.0 SETS, Supplier: ABC Facades Pvt Ltd, Notes: Delivery delayed and currently affecting facade installation.)\n- Material : Ceramic Floor Tiles (Status: LOW_STOCK, Qty: 450.0 BOXES, Supplier: Kajaria, Notes: Reserve stock running low.)\n- Material : Safety Barricade Panels (Status: LOW_STOCK, Qty: 12.0 UNITS, Supplier: Site Safety Supplier, Notes: Additional units ordered for perimeter.)\n- Material : Fire-Rated Electrical Cable (Status: OUT_OF_STOCK, Qty: 0.0 METERS, Supplier: Electrical Supplier, Notes: Current stock unavailable and MEP installation may be affected.)\n\n- Follow up with vendors and procurement leads regarding pending material shipments.\n- Coordinate staging area logistics to prevent milestone installation delays.",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 10,
+      "category": "Materials",
+      "question": "Which supplies are running low or pending shipment?",
+      "intent": "SAFETY_INCIDENTS",
+      "entities": [
+        "supplies",
+        "running",
+        "low",
+        "pending",
+        "shipment"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports",
+        "materials",
+        "safety_incidents"
+      ],
+      "sources_count": 6,
+      "summary": "**Identified Supply Blockers & Delays:**\n- Material : Aluminium Facade Frames (Status: DELAYED, Qty: 35.0 SETS, Supplier: ABC Facades Pvt Ltd, Notes: Delivery delayed and currently affecting facade installation.)\n- Material : Ceramic Floor Tiles (Status: LOW_STOCK, Qty: 450.0 BOXES, Supplier: Kajaria, Notes: Reserve stock running low.)\n- Material : Safety Barricade Panels (Status: LOW_STOCK, Qty: 12.0 UNITS, Supplier: Site Safety Supplier, Notes: Additional units ordered for perimeter.)\n- Material : Fire-Rated Electrical Cable (Status: OUT_OF_STOCK, Qty: 0.0 METERS, Supplier: Electrical Supplier, Notes: Current stock unavailable and MEP installation may be affected.)\n\n- Follow up with vendors and procurement leads regarding pending material shipments.\n- Coordinate staging area logistics to prevent milestone installation delays.",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 11,
+      "category": "Time / Recent Changes",
+      "question": "Has anything improved recently?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "has",
+        "anything",
+        "improved",
+        "recently"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [INSPECTION #118] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [DAILY_REPORT #83] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 12,
+      "category": "Time / Recent Changes",
+      "question": "What changed compared with earlier reports?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "changed",
+        "compared",
+        "earlier",
+        "reports"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- ### [ISSUE 1] Daily Report (2026-09-09) (Confidence: VERY_HIGH)\n- - PRIMARY EVIDENCE: [DAILY_REPORT #81] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- ### [ISSUE 2] Inspection Report : PPE Inspection (PASSED) (Confidence: HIGH)\n- - PRIMARY EVIDENCE: [INSPECTION #119] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 13,
+      "category": "Safety Incidents",
+      "question": "Which issues are still unresolved?",
+      "intent": "SAFETY_INCIDENTS",
+      "entities": [
+        "issues",
+        "still",
+        "unresolved"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports",
+        "safety_incidents",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [INCIDENT #270] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INCIDENT #273] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 14,
+      "category": "Safety Incidents",
+      "question": "Are there any safety concerns that need immediate action?",
+      "intent": "MATERIALS",
+      "entities": [
+        "safety",
+        "concerns",
+        "need",
+        "immediate",
+        "action",
+        "barricade",
+        "panels"
+      ],
+      "matched_materials": [
+        "Safety Barricade Panels"
+      ],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "materials",
+        "safety_incidents",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [MATERIAL #103] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [MATERIAL #100] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 15,
+      "category": "Safety Incidents",
+      "question": "Were any serious hazard events logged by workers?",
+      "intent": "SAFETY_INCIDENTS",
+      "entities": [
+        "serious",
+        "hazard",
+        "events",
+        "logged",
+        "workers"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "safety_incidents",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [INCIDENT #271] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INCIDENT #273] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 16,
+      "category": "Recommendations",
+      "question": "Where should the project manager focus today?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "where",
+        "should",
+        "project",
+        "manager",
+        "focus",
+        "today"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- ### [ISSUE 1] Inspection Report : Safety Inspection (FAILED) (Confidence: HIGH)\n- - PRIMARY EVIDENCE: [INSPECTION #118] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- ### [ISSUE 2] Daily Report (2026-09-12) (Confidence: MODERATE)\n- - PRIMARY EVIDENCE: [DAILY_REPORT #83] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 17,
+      "category": "Recommendations",
+      "question": "What should be discussed in the next site coordination meeting?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "should",
+        "discussed",
+        "next",
+        "site",
+        "coordination",
+        "meeting"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [DAILY_REPORT #79] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [OBSERVATION #160] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 18,
+      "category": "General Status",
+      "question": "Tell me about the current situation on site.",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "current",
+        "situation",
+        "site"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [MATERIAL #105] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INCIDENT #273] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 19,
+      "category": "General Status",
+      "question": "Give me a quick high-level summary of the jobsite.",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "quick",
+        "high",
+        "level",
+        "summary",
+        "jobsite"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [INCIDENT #273] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [AI_FINDING #627] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 20,
+      "category": "Multi-Source",
+      "question": "Which problems have evidence from more than one source?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "problems",
+        "have",
+        "evidence",
+        "from",
+        "more",
+        "than",
+        "one",
+        "source"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports",
+        "safety_incidents"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [INCIDENT #270] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INSPECTION #120] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 21,
+      "category": "Multi-Source",
+      "question": "Show me issues that are corroborated across multiple reports.",
+      "intent": "MATERIALS",
+      "entities": [
+        "issues",
+        "corroborated",
+        "across",
+        "multiple",
+        "reports",
+        "fire",
+        "rated",
+        "electrical",
+        "cable"
+      ],
+      "matched_materials": [
+        "Fire-Rated Electrical Cable"
+      ],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports",
+        "materials",
+        "safety_incidents",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- Report Date: 2026-09-12\n- Workforce: 34 workers on site\n- Progress: 55%\n- Work Completed: Only 55% of planned work completed\n- Work Planned: Facade frame installation\n- Site Blockers: Aluminium facade frames pending.\n- Weather: Rain",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 22,
+      "category": "PPE",
+      "question": "Are workers properly equipped with required safety gear?",
+      "intent": "PPE",
+      "entities": [
+        "workers",
+        "properly",
+        "equipped",
+        "required",
+        "safety",
+        "gear",
+        "barricade",
+        "panels"
+      ],
+      "matched_materials": [
+        "Safety Barricade Panels"
+      ],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "materials",
+        "ppe_vision",
+        "safety_incidents",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [MATERIAL #103] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INCIDENT #271] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "FAIL",
+      "failures": [
+        {
+          "layer": "QUERY_UNDERSTANDING",
+          "reason": "Failed to extract PPE computer vision evidence."
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "category": "PPE",
+      "question": "What did the AI cameras detect regarding helmet or vest compliance?",
+      "intent": "PPE",
+      "entities": [
+        "cameras",
+        "detect",
+        "regarding",
+        "helmet",
+        "vest",
+        "compliance"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "ppe_vision"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [AI_FINDING #637] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": true,
+      "has_attention_items": false,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 24,
+      "category": "Inspections",
+      "question": "Did the site pass recent safety and quality audits?",
+      "intent": "INSPECTION",
+      "entities": [
+        "site",
+        "pass",
+        "recent",
+        "safety",
+        "quality",
+        "audits",
+        "barricade",
+        "panels"
+      ],
+      "matched_materials": [
+        "Safety Barricade Panels"
+      ],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "materials",
+        "safety_incidents",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [MATERIAL #103] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [MATERIAL #100] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": true,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 25,
+      "category": "Observations",
+      "question": "What unsafe conditions were observed by supervisors?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "unsafe",
+        "conditions",
+        "observed",
+        "supervisors"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "safety_incidents",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [OBSERVATION #161] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INCIDENT #271] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": false,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 26,
+      "category": "Progress",
+      "question": "How is milestone velocity tracking against the work plan?",
+      "intent": "DAILY_REPORT",
+      "entities": [
+        "milestone",
+        "velocity",
+        "tracking",
+        "against",
+        "work",
+        "plan"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [DAILY_REPORT #83] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INSPECTION #118] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": true,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 27,
+      "category": "Progress",
+      "question": "What work packages were completed recently?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "work",
+        "packages",
+        "completed",
+        "recently"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "daily_reports",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- PRIMARY EVIDENCE: [DAILY_REPORT #80] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1\n- PRIMARY EVIDENCE: [INSPECTION #119] PROJECT: Pune Metro Commercial Hub \u2013 Phase 1",
+      "has_risk_card": false,
+      "has_materials_card": false,
+      "has_progress_card": true,
+      "has_ppe_card": false,
+      "has_attention_items": false,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    },
+    {
+      "id": 28,
+      "category": "Risk",
+      "question": "Why is the overall site risk flagged at its current rating?",
+      "intent": "GENERAL_PROJECT",
+      "entities": [
+        "overall",
+        "site",
+        "risk",
+        "flagged",
+        "its",
+        "current",
+        "rating"
+      ],
+      "matched_materials": [],
+      "matched_areas": [],
+      "data_used": [
+        "semantic_rag",
+        "risk_engine"
+      ],
+      "sources_count": 6,
+      "summary": "- **Authoritative Risk Score:** `70/100 (HIGH)`\n\n- Resolve open high/critical safety incidents and verify field corrective actions.\n- Conduct targeted audits in flagged active work zones.",
+      "has_risk_card": true,
+      "has_materials_card": false,
+      "has_progress_card": false,
+      "has_ppe_card": false,
+      "has_attention_items": true,
+      "has_actions": true,
+      "status": "PASS",
+      "failures": []
+    }
+  ]
+}
